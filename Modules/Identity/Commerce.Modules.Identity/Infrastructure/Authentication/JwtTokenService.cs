@@ -24,19 +24,19 @@ public sealed class JwtTokenService : IJwtTokenService
         ValidateOptions(_options);
     }
 
-    public string CreateToken(User user)
+    public string CreateToken(User user, DateTime expiresAtUtc)
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var expiresAtUtc = GetExpirationUtc();
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        var userId = user.Id.ToString();
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
+            new Claim(JwtRegisteredClaimNames.Sub, userId),
             new Claim(ClaimTypes.Name, user.DisplayName),
-            new Claim(PreferredUserNameClaimType, user.NormalizedUserName),
-            new Claim(ClaimTypes.NameIdentifier, user.NormalizedUserName)
+            new Claim(PreferredUserNameClaimType, user.UserName),
+            new Claim(ClaimTypes.NameIdentifier, userId)
         };
 
         var token = new JwtSecurityToken(

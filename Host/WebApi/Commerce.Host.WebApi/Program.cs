@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Default");
@@ -46,7 +47,12 @@ if (string.IsNullOrWhiteSpace(jwtOptions.Issuer)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers()
     .AddApplicationPart(typeof(Commerce.Modules.Identity.DependencyInjection).Assembly)
-    .AddApplicationPart(typeof(Commerce.Modules.Payment.DependencyInjection).Assembly);
+    .AddApplicationPart(typeof(Commerce.Modules.Payment.DependencyInjection).Assembly)
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower;
+    });
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -65,6 +71,11 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
             Message = firstError
         });
     };
+});
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+    options.SerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower;
 });
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services
@@ -126,7 +137,7 @@ app.MapGet("/", () => Results.Ok(new
 {
     service = "Commerce.Host.WebApi",
     status = "Running",
-    utcNow = DateTime.UtcNow
+    utc_now = DateTime.UtcNow
 }));
 
 app.MapControllers();

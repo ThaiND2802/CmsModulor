@@ -1,12 +1,15 @@
 using Commerce.Modules.Identity.Application.DTOs.Responses;
 using Commerce.Modules.Identity.Application.Mappings;
 using Commerce.Modules.Identity.Infrastructure;
+using CommerceCore.Application.Responses;
 using CommerceCore.SharedKernel.Exceptions;
+using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Commerce.Modules.Identity.Application.Queries.GetUsers;
 
-public sealed class GetUsersHandler
+public sealed class GetUsersHandler : IRequestHandler<GetUsersQuery, PagedApiResponse<UserDto>>
 {
     private readonly IdentityDbContext _dbContext;
 
@@ -15,7 +18,7 @@ public sealed class GetUsersHandler
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    public async Task<GetUsersResult> HandleAsync(GetUsersQuery query, CancellationToken cancellationToken)
+    public async Task<PagedApiResponse<UserDto>> Handle(GetUsersQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -32,15 +35,23 @@ public sealed class GetUsersHandler
         var usersQuery = _dbContext.Users
             .OrderBy(static x => x.UserName);
         var total = await usersQuery.CountAsync(cancellationToken);
+        var page = query.NormalizedPage;
+        var pageSize = query.NormalizedPageSize;
         var users = await usersQuery
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return new GetUsersResult(
-            users.Select(static x => x.ToUserDto()).ToList(),
-            total,
-            query.Page,
-            query.PageSize);
+        return new PagedApiResponse<UserDto>
+        {
+            Status = StatusCodes.Status200OK,
+            Data = users.Select(static x => x.ToUserDto()).ToList(),
+            Pagination = new PaginationMetadata
+            {
+                Total = total,
+                Page = page,
+                PageSize = pageSize
+            }
+        };
     }
 }

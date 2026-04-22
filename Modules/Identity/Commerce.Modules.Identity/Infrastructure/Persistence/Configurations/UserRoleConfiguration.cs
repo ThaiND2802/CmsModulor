@@ -9,7 +9,6 @@ public sealed class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
 {
     public void Configure(EntityTypeBuilder<UserRole> builder)
     {
-        builder.ToTable("UserRoles");
         builder.HasKey(static x => x.Id);
 
         builder.Property(static x => x.AssignedAtUtc)

@@ -1,11 +1,15 @@
 using Commerce.Modules.Identity.Application.DTOs.Responses;
 using Commerce.Modules.Identity.Application.Mappings;
 using Commerce.Modules.Identity.Infrastructure;
+using CommerceCore.Application.Responses;
+using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Commerce.Modules.Identity.Application.Queries.GetAuthorizationOverview;
 
 public sealed class GetAuthorizationOverviewHandler
+    : IRequestHandler<GetAuthorizationOverviewQuery, ApiResponse<AuthorizationOverviewDto>>
 {
     private static readonly IReadOnlyCollection<string> ResolutionOrder =
     [
@@ -23,7 +27,7 @@ public sealed class GetAuthorizationOverviewHandler
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    public async Task<AuthorizationOverviewDto> HandleAsync(
+    public async Task<ApiResponse<AuthorizationOverviewDto>> Handle(
         GetAuthorizationOverviewQuery query,
         CancellationToken cancellationToken)
     {
@@ -38,14 +42,20 @@ public sealed class GetAuthorizationOverviewHandler
             .ThenBy(static x => x.Code)
             .ToListAsync(cancellationToken);
 
-        return new AuthorizationOverviewDto(
-            true,
-            true,
-            true,
-            "IdentityDbContext",
-            "X-Commerce-UserId -> User.NormalizedUserName",
-            ResolutionOrder,
-            roles.Select(static x => x.ToRoleOverviewDto()).ToList(),
-            permissions.Select(static x => x.ToPermissionOverviewDto()).ToList());
+        return new ApiResponse<AuthorizationOverviewDto>
+        {
+            Status = StatusCodes.Status200OK,
+            Data = new AuthorizationOverviewDto
+            {
+                ModuleGatingRunsFirst = true,
+                FeatureGatingRunsBeforeAuthorization = true,
+                DbPermissionGateImplemented = true,
+                PermissionSource = "IdentityDbContext",
+                CurrentDevelopmentUserLookup = "X-Commerce-UserId -> User.Id (GUID)",
+                ResolutionOrder = ResolutionOrder,
+                Roles = roles.Select(static x => x.ToRoleOverviewDto()).ToList(),
+                Permissions = permissions.Select(static x => x.ToPermissionOverviewDto()).ToList()
+            }
+        };
     }
 }

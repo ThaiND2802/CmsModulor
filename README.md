@@ -33,11 +33,18 @@ Each module exposes:
 
 `Identity` and `Payment` now use ASP.NET MVC controllers with `[ApiController]` and controller-based routing. Other modules still expose Minimal API endpoint mappings for now.
 
+Identity now pilots CQRS with MediatR `IRequest<T>` for login and read endpoints, and Payment now follows the same direct controller binding pattern. Shared list queries can inherit `PagedListRequest` from `CommerceCore.Application`, controllers stay thin by binding command/query models directly, route parameters are merged in the controller, JSON request/response contracts use global `snake_case`, and query parameters use explicit `snake_case` names where needed.
+
+For controller-based APIs, the host applies global `System.Text.Json` `snake_case` naming, while query parameters such as `page_size` and `sort_by` are bound explicitly through `[FromQuery(Name = ...)]`. No raw request/response body rewrite middleware is used.
+
+
 ## Host
 
 `Host/WebApi/Commerce.Host.WebApi` wires shared services, exposes Swagger, and loads modules from `Host/WebApi/Commerce.Host.WebApi/appsettings.json`.
 
 The host is also the only place allowed to read database connection strings. The main configuration path is `Host/WebApi/Commerce.Host.WebApi/appsettings.json`, and the shared connection string is stored under `ConnectionStrings:Default`.
+
+JWT signing secrets must not be committed in config files. Keep both shared and development `appsettings*.json` free of `Jwt:SigningKey`, and provide it through environment variables or a secret store such as user secrets for local development.
 
 ## API response convention
 
@@ -52,10 +59,10 @@ HTTP responses now follow a shared envelope contract across the host pipeline an
   - `data`
   - `pagination.total`
   - `pagination.page`
-  - `pagination.pageSize`
+  - `pagination.page_size`
 - handled application errors return:
   - `status`
-  - `errorCode`
+  - `error_code`
   - `message`
 
 The shared response models live in `CommerceCore.Application/Responses`, and the shared exception hierarchy lives in `CommerceCore.SharedKernel/Exceptions`.
@@ -92,12 +99,12 @@ Permission checks are enforced through endpoint metadata in `CommerceCore.Featur
 
 Requests are evaluated in order: module, feature, then permission. A disabled module returns `404`, a disabled feature returns `404`, an anonymous caller hitting a permission-protected endpoint returns `401`, and an authenticated caller without the required permission returns `403`.
 
-For local and development testing, the current user is resolved from request headers:
+For authenticated requests, the current user is resolved from JWT claims first. In local and development testing, it can fall back to request headers:
 
 - `X-Commerce-UserId`
 - `X-Commerce-UserName`
 
-For the current development flow, `X-Commerce-UserId` is treated as username semantics and resolved against `User.NormalizedUserName` in the `Identity` database schema.
+`X-Commerce-UserId` is intended to carry the stable `User.Id` GUID, while `X-Commerce-UserName` carries the login name.
 
 Permission resolution order is:
 
@@ -134,6 +141,12 @@ Local and development environments currently use PostgreSQL via `ConnectionStrin
 Modules must not read `GetConnectionString(...)` directly and must not hardcode provider/connection string setup. The host reads the connection string once during startup and passes it into module registration, while `CommerceCore` centralizes provider wiring through `UseDefaultDatabase(connectionString)`.
 
 This keeps `CommerceCore` focused on shared persistence foundation while modules continue to own business entities and module-specific `DbContext` implementations.
+
+Module-owned database tables should use the naming convention `{module_prefix}_{plural_snake_case_entity}` to make ownership clear inside the shared database. Examples include `identity_users`, `identity_roles`, `identity_permissions`, and `payment_methods`.
+
+Table names are now declared directly on module-owned entity classes via `[Table(...)]`, while each module's EF configuration keeps ownership of keys, indexes, relationships, and constraints.
+
+Table naming ownership stays inside each module rather than being centralized in `CommerceCore`.
 
 ## Identity authorization schema
 

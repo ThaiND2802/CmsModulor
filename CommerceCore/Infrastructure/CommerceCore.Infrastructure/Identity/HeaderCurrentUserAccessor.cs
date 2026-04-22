@@ -24,24 +24,15 @@ public sealed class HeaderCurrentUserAccessor : ICurrentUser
 
     public string? UserName => GetUserName();
 
-    public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true
-        || !string.IsNullOrWhiteSpace(UserId);
+    public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true;
 
     private string? GetUserId()
     {
         var principal = _httpContextAccessor.HttpContext?.User;
         if (principal?.Identity?.IsAuthenticated == true)
         {
-            var claimValue =
-                principal.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? principal.FindFirstValue(PreferredUserNameClaimType)
-                ?? principal.FindFirstValue(ClaimTypes.Name)
+            return principal.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? principal.FindFirstValue("sub");
-
-            if (!string.IsNullOrWhiteSpace(claimValue))
-            {
-                return claimValue;
-            }
         }
 
         return GetHeaderValue(UserIdHeaderName);
@@ -52,16 +43,9 @@ public sealed class HeaderCurrentUserAccessor : ICurrentUser
         var principal = _httpContextAccessor.HttpContext?.User;
         if (principal?.Identity?.IsAuthenticated == true)
         {
-            var claimValue =
-                principal.FindFirstValue(PreferredUserNameClaimType)
-                ?? principal.FindFirstValue(ClaimTypes.Name)
+            return principal.FindFirstValue(PreferredUserNameClaimType)
                 ?? principal.FindFirstValue("sub")
                 ?? principal.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (!string.IsNullOrWhiteSpace(claimValue))
-            {
-                return claimValue;
-            }
         }
 
         return GetHeaderValue(UserNameHeaderName);

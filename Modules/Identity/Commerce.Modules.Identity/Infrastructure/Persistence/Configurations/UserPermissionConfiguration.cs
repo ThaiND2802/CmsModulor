@@ -9,7 +9,6 @@ public sealed class UserPermissionConfiguration : IEntityTypeConfiguration<UserP
 {
     public void Configure(EntityTypeBuilder<UserPermission> builder)
     {
-        builder.ToTable("UserPermissions");
         builder.HasKey(static x => x.Id);
 
         builder.Property(static x => x.Effect)

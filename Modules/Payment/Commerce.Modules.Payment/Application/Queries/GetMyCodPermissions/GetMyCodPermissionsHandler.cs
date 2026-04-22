@@ -1,10 +1,12 @@
 using Commerce.Modules.Payment.Application.DTOs.Responses;
 using CommerceCore.Application.Abstractions;
+using CommerceCore.Application.Responses;
 using CommerceCore.FeatureManagement.Abstractions;
+using MediatR;
 
 namespace Commerce.Modules.Payment.Application.Queries.GetMyCodPermissions;
 
-public sealed class GetMyCodPermissionsHandler
+public sealed class GetMyCodPermissionsHandler : IRequestHandler<GetMyCodPermissionsQuery, ApiResponse<PaymentCodPermissionsResponse>>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPermissionGate _permissionGate;
@@ -15,7 +17,7 @@ public sealed class GetMyCodPermissionsHandler
         _permissionGate = permissionGate ?? throw new ArgumentNullException(nameof(permissionGate));
     }
 
-    public async Task<PaymentCodPermissionsResponse> HandleAsync(
+    public async Task<ApiResponse<PaymentCodPermissionsResponse>> Handle(
         GetMyCodPermissionsQuery query,
         CancellationToken cancellationToken)
     {
@@ -26,10 +28,20 @@ public sealed class GetMyCodPermissionsHandler
         var canCheckout = _currentUser.IsAuthenticated
             && await _permissionGate.HasPermissionAsync(_currentUser.UserId!, "Payment.COD.Checkout", cancellationToken);
 
-        return new PaymentCodPermissionsResponse(
-            _currentUser.UserId,
-            _currentUser.UserName,
-            _currentUser.IsAuthenticated,
-            new PaymentCodPermissionFlags(canRead, canCheckout));
+        return new ApiResponse<PaymentCodPermissionsResponse>
+        {
+            Status = 200,
+            Data = new PaymentCodPermissionsResponse
+            {
+                UserId = _currentUser.UserId,
+                UserName = _currentUser.UserName,
+                IsAuthenticated = _currentUser.IsAuthenticated,
+                Permissions = new PaymentCodPermissionFlags
+                {
+                    PaymentCodRead = canRead,
+                    PaymentCodCheckout = canCheckout
+                }
+            }
+        };
     }
 }

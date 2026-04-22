@@ -1,11 +1,13 @@
 using Commerce.Modules.Identity.Application.DTOs.Responses;
 using Commerce.Modules.Identity.Application.Queries.GetAuthorizationOverview;
-using Commerce.Modules.Identity.Application.Queries.GetUsers;
+using Commerce.Modules.Identity.Application.Queries.GetMe;
+using Commerce.Modules.Identity.Application.Queries.GetMyPermissions;
 using CommerceCore.Application.Controllers;
 using CommerceCore.Application.Responses;
 using CommerceCore.Application.Swagger;
 using CommerceCore.FeatureManagement.Attributes;
 using CommerceCore.FeatureManagement.Authorization;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,30 +19,29 @@ namespace Commerce.Modules.Identity.Controllers;
 [SwaggerModuleTag("Identity")]
 public sealed class IdentityAuthorizationController : ApiControllerBase
 {
-    private const int DefaultPage = 1;
-    private const int DefaultPageSize = 20;
+    private readonly IMediator _mediator;
 
-    private readonly GetUsersHandler _getUsersHandler;
-    private readonly GetAuthorizationOverviewHandler _getAuthorizationOverviewHandler;
-
-    public IdentityAuthorizationController(
-        GetUsersHandler getUsersHandler,
-        GetAuthorizationOverviewHandler getAuthorizationOverviewHandler)
+    public IdentityAuthorizationController(IMediator mediator)
     {
-        _getUsersHandler = getUsersHandler ?? throw new ArgumentNullException(nameof(getUsersHandler));
-        _getAuthorizationOverviewHandler = getAuthorizationOverviewHandler ?? throw new ArgumentNullException(nameof(getAuthorizationOverviewHandler));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
-    [HttpGet("users")]
-    [PermissionAuthorize("Identity.Users.Read")]
-    [ProducesResponseType(typeof(PagedApiResponse<UserDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PagedApiResponse<UserDto>>> GetUsers(
-        [FromQuery] int page = DefaultPage,
-        [FromQuery] int pageSize = DefaultPageSize,
-        CancellationToken cancellationToken = default)
+    [HttpGet("me")]
+    [PermissionAuthorize("Identity.Me.Read")]
+    [ProducesResponseType(typeof(ApiResponse<UserDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<UserDto>>> GetMe(CancellationToken cancellationToken)
     {
-        var result = await _getUsersHandler.HandleAsync(new GetUsersQuery(page, pageSize), cancellationToken);
-        return PagedResponse(result.Users, result.Total, result.Page, result.PageSize);
+        var response = await _mediator.Send(new GetMeQuery(), cancellationToken);
+        return StatusCode(response.Status, response);
+    }
+
+    [HttpGet("my-permissions")]
+    [PermissionAuthorize("Identity.MyPermissions.Read")]
+    [ProducesResponseType(typeof(ApiResponse<MyPermissionsResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<MyPermissionsResponse>>> GetMyPermissions(CancellationToken cancellationToken)
+    {
+        var response = await _mediator.Send(new GetMyPermissionsQuery(), cancellationToken);
+        return StatusCode(response.Status, response);
     }
 
     [HttpGet("authorization/overview")]
@@ -49,7 +50,7 @@ public sealed class IdentityAuthorizationController : ApiControllerBase
     public async Task<ActionResult<ApiResponse<AuthorizationOverviewDto>>> GetAuthorizationOverview(
         CancellationToken cancellationToken)
     {
-        var response = await _getAuthorizationOverviewHandler.HandleAsync(new GetAuthorizationOverviewQuery(), cancellationToken);
-        return SuccessResponse(response);
+        var response = await _mediator.Send(new GetAuthorizationOverviewQuery(), cancellationToken);
+        return Ok(response);
     }
 }

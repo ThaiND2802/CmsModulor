@@ -1,7 +1,9 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using CommerceCore.Application.Abstractions;
 
 namespace Commerce.Modules.Identity.Domain;
 
+[Table("identity_users")]
 public sealed class User : IAuditableEntity, ISoftDelete
 {
     public Guid Id { get; set; }

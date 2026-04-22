@@ -9,18 +9,20 @@ public static class UserMappings
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        return new UserDto(
-            user.Id,
-            user.UserName,
-            user.NormalizedUserName,
-            user.DisplayName,
-            user.Email,
-            user.IsActive,
-            user.IsSystem,
-            user.LastLoginAtUtc,
-            user.CreatedAtUtc,
-            user.CreatedBy,
-            user.UpdatedAtUtc,
-            user.UpdatedBy);
+        return new UserDto
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            NormalizedUserName = user.NormalizedUserName,
+            DisplayName = user.DisplayName,
+            Email = user.Email,
+            IsActive = user.IsActive,
+            IsSystem = user.IsSystem,
+            LastLoginAtUtc = user.LastLoginAtUtc,
+            CreatedAtUtc = user.CreatedAtUtc,
+            CreatedBy = user.CreatedBy,
+            UpdatedAtUtc = user.UpdatedAtUtc,
+            UpdatedBy = user.UpdatedBy
+        };
     }
 }

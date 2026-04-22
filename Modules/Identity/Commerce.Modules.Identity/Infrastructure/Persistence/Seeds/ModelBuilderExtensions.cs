@@ -24,7 +24,24 @@ internal static class ModelBuilderExtensions
                 SystemSeed.OrderUpdateStatusPermission,
                 SystemSeed.ReportingViewPermission,
                 SystemSeed.IdentityUsersReadPermission,
-                SystemSeed.IdentityAuthorizationReadPermission);
+                SystemSeed.IdentityAuthorizationReadPermission,
+                SystemSeed.IdentityMeReadPermission,
+                SystemSeed.IdentityMyPermissionsReadPermission,
+                SystemSeed.IdentityUsersCreatePermission,
+                SystemSeed.IdentityUsersUpdatePermission,
+                SystemSeed.IdentityUsersDeletePermission,
+                SystemSeed.IdentityRolesReadPermission,
+                SystemSeed.IdentityRolesCreatePermission,
+                SystemSeed.IdentityRolesUpdatePermission,
+                SystemSeed.IdentityRolesDeletePermission,
+                SystemSeed.IdentityPermissionsReadPermission,
+                SystemSeed.IdentityPermissionsCreatePermission,
+                SystemSeed.IdentityPermissionsUpdatePermission,
+                SystemSeed.IdentityPermissionsDeletePermission,
+                SystemSeed.IdentityUserRolesReadPermission,
+                SystemSeed.IdentityUserRolesAssignPermission,
+                SystemSeed.IdentityUserPermissionsReadPermission,
+                SystemSeed.IdentityUserPermissionsAssignPermission);
 
         modelBuilder.Entity<UserRole>()
             .HasData(SystemSeed.AdminUserRole, SystemSeed.ManagerUserRole, SystemSeed.CashierUserRole);

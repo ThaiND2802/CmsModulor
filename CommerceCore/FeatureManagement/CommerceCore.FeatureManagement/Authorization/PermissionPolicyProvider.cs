@@ -17,6 +17,7 @@ public sealed class PermissionPolicyProvider : DefaultAuthorizationPolicyProvide
             var permission = policyName.Substring($"{PermissionAuthorizeAttribute.PolicyPrefix}:".Length);
 
             return new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
                 .AddRequirements(new PermissionRequirement(permission))
                 .Build();
         }

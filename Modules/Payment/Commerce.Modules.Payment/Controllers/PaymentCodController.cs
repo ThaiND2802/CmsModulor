@@ -7,6 +7,7 @@ using CommerceCore.Application.Responses;
 using CommerceCore.Application.Swagger;
 using CommerceCore.FeatureManagement.Attributes;
 using CommerceCore.FeatureManagement.Authorization;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,18 +19,11 @@ namespace Commerce.Modules.Payment.Controllers;
 [SwaggerModuleTag("Payment")]
 public sealed class PaymentCodController : ApiControllerBase
 {
-    private readonly GetCodHealthHandler _getCodHealthHandler;
-    private readonly GetMyCodPermissionsHandler _getMyCodPermissionsHandler;
-    private readonly CreateCodCheckoutHandler _createCodCheckoutHandler;
+    private readonly IMediator _mediator;
 
-    public PaymentCodController(
-        GetCodHealthHandler getCodHealthHandler,
-        GetMyCodPermissionsHandler getMyCodPermissionsHandler,
-        CreateCodCheckoutHandler createCodCheckoutHandler)
+    public PaymentCodController(IMediator mediator)
     {
-        _getCodHealthHandler = getCodHealthHandler ?? throw new ArgumentNullException(nameof(getCodHealthHandler));
-        _getMyCodPermissionsHandler = getMyCodPermissionsHandler ?? throw new ArgumentNullException(nameof(getMyCodPermissionsHandler));
-        _createCodCheckoutHandler = createCodCheckoutHandler ?? throw new ArgumentNullException(nameof(createCodCheckoutHandler));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     [HttpGet("health")]
@@ -38,8 +32,8 @@ public sealed class PaymentCodController : ApiControllerBase
     [ProducesResponseType(typeof(ApiResponse<PaymentCodHealthResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<PaymentCodHealthResponse>>> GetHealth(CancellationToken cancellationToken)
     {
-        var response = await _getCodHealthHandler.HandleAsync(new GetCodHealthQuery(), cancellationToken);
-        return SuccessResponse(response);
+        var response = await _mediator.Send(new GetCodHealthQuery(), cancellationToken);
+        return StatusCode(response.Status, response);
     }
 
     [HttpGet("permissions/me")]
@@ -49,8 +43,8 @@ public sealed class PaymentCodController : ApiControllerBase
     public async Task<ActionResult<ApiResponse<PaymentCodPermissionsResponse>>> GetMyPermissions(
         CancellationToken cancellationToken)
     {
-        var response = await _getMyCodPermissionsHandler.HandleAsync(new GetMyCodPermissionsQuery(), cancellationToken);
-        return SuccessResponse(response);
+        var response = await _mediator.Send(new GetMyCodPermissionsQuery(), cancellationToken);
+        return StatusCode(response.Status, response);
     }
 
     [HttpPost("checkout")]
@@ -59,7 +53,7 @@ public sealed class PaymentCodController : ApiControllerBase
     [ProducesResponseType(typeof(ApiResponse<PaymentCodCheckoutResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<PaymentCodCheckoutResponse>>> CreateCodCheckout(CancellationToken cancellationToken)
     {
-        var response = await _createCodCheckoutHandler.HandleAsync(new CreateCodCheckoutCommand(), cancellationToken);
-        return SuccessResponse(response);
+        var response = await _mediator.Send(new CreateCodCheckoutCommand(), cancellationToken);
+        return StatusCode(response.Status, response);
     }
 }

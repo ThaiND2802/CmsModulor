@@ -8,6 +8,7 @@ using Commerce.Modules.Identity.Infrastructure.Security;
 using CommerceCore.FeatureManagement.Abstractions;
 using CommerceCore.Infrastructure.Persistence;
 using CommerceCore.Infrastructure.Persistence.Abstractions;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -34,9 +35,10 @@ public static class DependencyInjection
         services.AddScoped<IPermissionGate, DbPermissionGate>();
         services.AddScoped<IPasswordHasherService, PasswordHasherService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
-        services.AddScoped<LoginHandler>();
-        services.AddScoped<GetUsersHandler>();
-        services.AddScoped<GetAuthorizationOverviewHandler>();
+        services.AddMediatR(configuration =>
+        {
+            configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+        });
 
         return services;
     }

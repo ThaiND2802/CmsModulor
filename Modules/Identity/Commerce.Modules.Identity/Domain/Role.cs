@@ -1,7 +1,9 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using CommerceCore.Application.Abstractions;
 
 namespace Commerce.Modules.Identity.Domain;
 
+[Table("identity_roles")]
 public sealed class Role : IAuditableEntity, ISoftDelete
 {
     public Guid Id { get; set; }

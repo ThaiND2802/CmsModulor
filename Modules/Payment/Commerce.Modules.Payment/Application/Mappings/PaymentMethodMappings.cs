@@ -9,26 +9,30 @@ public static class PaymentMethodMappings
     {
         ArgumentNullException.ThrowIfNull(entity);
 
-        return new PaymentMethodDto(
-            entity.Id,
-            entity.Code,
-            entity.Name,
-            entity.IsActive,
-            entity.CreatedAtUtc,
-            entity.CreatedBy,
-            entity.UpdatedAtUtc,
-            entity.UpdatedBy);
+        return new PaymentMethodDto
+        {
+            Id = entity.Id,
+            Code = entity.Code,
+            Name = entity.Name,
+            IsActive = entity.IsActive,
+            CreatedAtUtc = entity.CreatedAtUtc,
+            CreatedBy = entity.CreatedBy,
+            UpdatedAtUtc = entity.UpdatedAtUtc,
+            UpdatedBy = entity.UpdatedBy
+        };
     }
 
     public static DeletedPaymentMethodDto ToDeletedPaymentMethodDto(this PaymentMethod entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
 
-        return new DeletedPaymentMethodDto(
-            entity.Id,
-            entity.Code,
-            entity.Name,
-            entity.DeletedAtUtc,
-            entity.DeletedBy);
+        return new DeletedPaymentMethodDto
+        {
+            Id = entity.Id,
+            Code = entity.Code,
+            Name = entity.Name,
+            DeletedAtUtc = entity.DeletedAtUtc,
+            DeletedBy = entity.DeletedBy
+        };
     }
 }

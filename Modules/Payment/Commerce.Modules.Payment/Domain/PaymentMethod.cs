@@ -1,7 +1,9 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using CommerceCore.Application.Abstractions;
 
 namespace Commerce.Modules.Payment.Domain;
 
+[Table("payment_methods")]
 public sealed class PaymentMethod : IAuditableEntity, ISoftDelete
 {
     public Guid Id { get; set; }

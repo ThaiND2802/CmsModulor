@@ -26,15 +26,21 @@ public sealed class DbPermissionGate : IPermissionGate
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(permission);
 
-        var normalizedUserName = userId.Trim().ToUpperInvariant();
-        var permissionCode = permission.Trim();
+        var userLookupValue = userId.Trim();
+        var permissionCode = permission.Trim().ToUpperInvariant();
         var now = DateTime.UtcNow;
 
-        var userRecord = await _dbContext.Users
-            .Where(static x => x.IsActive)
-            .Where(x => x.NormalizedUserName == normalizedUserName)
-            .Select(static x => new { x.Id })
-            .FirstOrDefaultAsync(cancellationToken);
+        var userRecord = Guid.TryParse(userLookupValue, out var parsedUserId)
+            ? await _dbContext.Users
+                .Where(static x => x.IsActive)
+                .Where(x => x.Id == parsedUserId)
+                .Select(static x => new { x.Id })
+                .FirstOrDefaultAsync(cancellationToken)
+            : await _dbContext.Users
+                .Where(static x => x.IsActive)
+                .Where(x => x.NormalizedUserName == userLookupValue.ToUpperInvariant())
+                .Select(static x => new { x.Id })
+                .FirstOrDefaultAsync(cancellationToken);
 
         if (userRecord is null)
         {

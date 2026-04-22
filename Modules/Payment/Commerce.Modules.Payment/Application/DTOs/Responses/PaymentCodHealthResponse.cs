@@ -1,3 +1,10 @@
 namespace Commerce.Modules.Payment.Application.DTOs.Responses;
 
-public sealed record PaymentCodHealthResponse(string Module, string Feature, string Status);
+public sealed record PaymentCodHealthResponse
+{
+    public string Module { get; init; } = default!;
+
+    public string Feature { get; init; } = default!;
+
+    public string Status { get; init; } = default!;
+}

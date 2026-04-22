@@ -1,12 +1,14 @@
 using Commerce.Modules.Payment.Application.DTOs.Responses;
 using Commerce.Modules.Payment.Domain;
+using CommerceCore.Application.Responses;
 using CommerceCore.Infrastructure.Persistence.Abstractions;
 using CommerceCore.SharedKernel.Exceptions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Commerce.Modules.Payment.Application.Commands.DeletePaymentMethod;
 
-public sealed class DeletePaymentMethodHandler
+public sealed class DeletePaymentMethodHandler : IRequestHandler<DeletePaymentMethodCommand, ApiResponse<DeletePaymentMethodResponse>>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -15,7 +17,7 @@ public sealed class DeletePaymentMethodHandler
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<DeletePaymentMethodResponse> HandleAsync(DeletePaymentMethodCommand command, CancellationToken cancellationToken)
+    public async Task<ApiResponse<DeletePaymentMethodResponse>> Handle(DeletePaymentMethodCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -37,6 +39,14 @@ public sealed class DeletePaymentMethodHandler
         repository.Remove(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new DeletePaymentMethodResponse(entity.Id, entity.IsDeleted);
+        return new ApiResponse<DeletePaymentMethodResponse>
+        {
+            Status = 200,
+            Data = new DeletePaymentMethodResponse
+            {
+                Id = entity.Id,
+                Deleted = entity.IsDeleted
+            }
+        };
     }
 }

@@ -1,9 +1,10 @@
 using CommerceCore.Application.Abstractions;
 using CommerceCore.Infrastructure.Persistence;
-using Commerce.Modules.Identity.Infrastructure.Authentication;
 using Commerce.Modules.Identity.Domain;
 using Commerce.Modules.Identity.Infrastructure.Persistence.Seeds;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Commerce.Modules.Identity.Infrastructure;
 
@@ -35,49 +36,46 @@ public sealed class IdentityDbContext : BaseDbContext
         modelBuilder.ApplyIdentityAuthorizationSeed();
     }
 
-    public Task EnsureSeedDataAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureSeedDataAsync(CancellationToken cancellationToken = default)
     {
-        return EnsureSeedDataInternalAsync(cancellationToken);
-    }
+        var databaseCreator = Database.GetService<IRelationalDatabaseCreator>();
 
-    private async Task EnsureSeedDataInternalAsync(CancellationToken cancellationToken)
-    {
-        await Database.MigrateAsync(cancellationToken);
-        await SynchronizeSeedPasswordsAsync(cancellationToken);
-    }
-
-    private async Task SynchronizeSeedPasswordsAsync(CancellationToken cancellationToken)
-    {
-        var passwordHasher = new PasswordHasherService();
-        var seededUserIds = SystemSeed.SeedUserPasswords
-            .Select(static x => x.UserId)
-            .ToArray();
-
-        var users = await Users
-            .Where(x => seededUserIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, cancellationToken);
-
-        var updated = false;
-
-        foreach (var (userId, password) in SystemSeed.SeedUserPasswords)
+        if (!await databaseCreator.ExistsAsync(cancellationToken))
         {
-            if (!users.TryGetValue(userId, out var user))
-            {
-                continue;
-            }
-
-            if (!string.IsNullOrWhiteSpace(user.PasswordHash) && passwordHasher.Verify(user.PasswordHash, password))
-            {
-                continue;
-            }
-
-            user.PasswordHash = passwordHasher.Hash(password);
-            updated = true;
+            await Database.EnsureCreatedAsync(cancellationToken);
+            return;
         }
 
-        if (updated)
+        if (await IdentityUsersTableExistsAsync(cancellationToken))
         {
-            await SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        await databaseCreator.CreateTablesAsync(cancellationToken);
+    }
+
+    private async Task<bool> IdentityUsersTableExistsAsync(CancellationToken cancellationToken)
+    {
+        await Database.OpenConnectionAsync(cancellationToken);
+
+        try
+        {
+            await using var command = Database.GetDbConnection().CreateCommand();
+            command.CommandText = """
+                select exists (
+                    select 1
+                    from information_schema.tables
+                    where table_schema = 'public'
+                      and table_name = 'identity_users'
+                )
+                """;
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            return result is true;
+        }
+        finally
+        {
+            await Database.CloseConnectionAsync();
         }
     }
 }

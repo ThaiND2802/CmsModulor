@@ -10,12 +10,12 @@ Use this section as the quick-load context for AI assistants.
 
 - JWT login endpoint exists at `POST /api/identity/login`
 - JWT bearer authentication is configured in the host
+- JWT signing secrets must be supplied from environment variables or secret storage, not committed `appsettings*.json`
 - current user resolution is claims-based through `ICurrentUser`
 - permission enforcement runs through custom middleware, not ASP.NET Core `[Authorize]`
 - runtime authorization uses the database-backed `DbPermissionGate`
 - authorization entities exist: `User`, `Role`, `Permission`, `UserRole`, `RolePermission`, `UserPermission`
 - seed users exist: `admin`, `manager`, `cashier`
-- development/bootstrap passwords are seeded for those users in `SystemSeed`
 - seed roles exist: `ADMIN`, `MANAGER`, `CASHIER`
 - identity read endpoints currently exist for users and authorization overview
 
@@ -41,17 +41,21 @@ Important: `POST /api/identity/login` is currently not decorated with `[RequireM
 
 `HeaderCurrentUserAccessor` resolves user data from claims first:
 
+For `UserId`:
 - `ClaimTypes.NameIdentifier`
-- `preferred_username`
-- `ClaimTypes.Name`
 - `sub`
+
+For `UserName`:
+- `preferred_username`
+- `sub`
+- `ClaimTypes.NameIdentifier`
 
 In development only, it can fall back to headers:
 
-- `X-Commerce-UserId`
+- `X-Commerce-UserId` (stable `User.Id` GUID)
 - `X-Commerce-UserName`
 
-Important: the current permission flow effectively uses normalized username as the lookup identity, even though the property is named `UserId`.
+Important: `ICurrentUser.UserId` is intended to represent the stable persisted `User.Id`, while `UserName` carries the login name.
 
 ### Current permission source
 
@@ -71,13 +75,13 @@ Implemented:
 
 - `POST /api/identity/login`
 - `GET /api/identity/users`
+- `GET /api/identity/me`
+- `GET /api/identity/my-permissions`
 - `GET /api/identity/authorization/overview`
 - `GET /api/identity/health`
 
 Not implemented yet:
 
-- `GET /api/identity/me`
-- `GET /api/identity/my-permissions`
 - user management write endpoints
 - role management endpoints
 - permission management endpoints
@@ -141,9 +145,10 @@ Module gating and feature gating still run before authorization. The active runt
 
 `Identity` now follows the shared API response contract used by controller-based modules:
 
-- success item/detail responses return `ApiResponse<T>`
-- list responses return `PagedApiResponse<T>`
-- handled application errors return `ErrorResponse` with `status`, `errorCode`, and `message`
+- success item/detail responses return `ApiResponse<T>` serialized as `snake_case`
+- list responses return `PagedApiResponse<T>` serialized as `snake_case`
+- handled application errors return `ErrorResponse` with `status`, `error_code`, and `message`
+- list query params use explicit `snake_case` names such as `page`, `page_size`, `search`, `sort_by`, and `desc`
 - login validation failures use `ValidationAppException`
 - invalid credentials use `UnauthorizedAppException`
 
@@ -153,3 +158,13 @@ Current controller coverage:
 - `GET /api/identity/users` returns `PagedApiResponse<T>` and requires `Identity.Users.Read`
 - `GET /api/identity/authorization/overview` returns `ApiResponse<T>` and requires `Identity.Authorization.Read`
 - `GET /api/identity/health` returns `ApiResponse<T>`
+
+## CQRS snapshot
+
+Identity now pilots CQRS with MediatR `IRequest<T>` for login and the current read endpoints.
+
+- controllers bind directly to command/query models and delegate with `_mediator.Send(...)`
+- command/query inputs use `sealed record` property-based models
+- route parameters stay in the controller and are merged into commands with `with` when needed
+- handlers own the application logic for login, users listing, and authorization overview
+- `PagedListRequest` is the shared base model for list queries

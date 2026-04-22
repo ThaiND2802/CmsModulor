@@ -9,10 +9,9 @@ using CommerceCore.Application.Controllers;
 using CommerceCore.Application.Responses;
 using CommerceCore.Application.Swagger;
 using CommerceCore.FeatureManagement.Attributes;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using CreatePaymentMethodRequestDto = Commerce.Modules.Payment.Application.DTOs.Requests.CreatePaymentMethodRequest;
-using UpdatePaymentMethodRequestDto = Commerce.Modules.Payment.Application.DTOs.Requests.UpdatePaymentMethodRequest;
 
 namespace Commerce.Modules.Payment.Controllers;
 
@@ -22,42 +21,22 @@ namespace Commerce.Modules.Payment.Controllers;
 [SwaggerModuleTag("Payment")]
 public sealed class PaymentMethodsController : ApiControllerBase
 {
-    private const int DefaultPage = 1;
-    private const int DefaultPageSize = 20;
+    private readonly IMediator _mediator;
 
-    private readonly GetPaymentMethodsHandler _getPaymentMethodsHandler;
-    private readonly GetPaymentMethodByIdHandler _getPaymentMethodByIdHandler;
-    private readonly CreatePaymentMethodHandler _createPaymentMethodHandler;
-    private readonly UpdatePaymentMethodHandler _updatePaymentMethodHandler;
-    private readonly DeletePaymentMethodHandler _deletePaymentMethodHandler;
-    private readonly GetDeletedPaymentMethodsHandler _getDeletedPaymentMethodsHandler;
-
-    public PaymentMethodsController(
-        GetPaymentMethodsHandler getPaymentMethodsHandler,
-        GetPaymentMethodByIdHandler getPaymentMethodByIdHandler,
-        CreatePaymentMethodHandler createPaymentMethodHandler,
-        UpdatePaymentMethodHandler updatePaymentMethodHandler,
-        DeletePaymentMethodHandler deletePaymentMethodHandler,
-        GetDeletedPaymentMethodsHandler getDeletedPaymentMethodsHandler)
+    public PaymentMethodsController(IMediator mediator)
     {
-        _getPaymentMethodsHandler = getPaymentMethodsHandler ?? throw new ArgumentNullException(nameof(getPaymentMethodsHandler));
-        _getPaymentMethodByIdHandler = getPaymentMethodByIdHandler ?? throw new ArgumentNullException(nameof(getPaymentMethodByIdHandler));
-        _createPaymentMethodHandler = createPaymentMethodHandler ?? throw new ArgumentNullException(nameof(createPaymentMethodHandler));
-        _updatePaymentMethodHandler = updatePaymentMethodHandler ?? throw new ArgumentNullException(nameof(updatePaymentMethodHandler));
-        _deletePaymentMethodHandler = deletePaymentMethodHandler ?? throw new ArgumentNullException(nameof(deletePaymentMethodHandler));
-        _getDeletedPaymentMethodsHandler = getDeletedPaymentMethodsHandler ?? throw new ArgumentNullException(nameof(getDeletedPaymentMethodsHandler));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(PagedApiResponse<PaymentMethodDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PagedApiResponse<PaymentMethodDto>>> GetPaymentMethods(
-        [FromQuery] int page = DefaultPage,
-        [FromQuery] int pageSize = DefaultPageSize,
+        [FromQuery] GetPaymentMethodsQuery query,
         CancellationToken cancellationToken = default)
     {
-        var result = await _getPaymentMethodsHandler.HandleAsync(new GetPaymentMethodsQuery(page, pageSize), cancellationToken);
-        return PagedResponse(result.Items, result.Total, result.Page, result.PageSize);
+        var response = await _mediator.Send(query, cancellationToken);
+        return Ok(response);
     }
 
     [HttpGet("{id:guid}")]
@@ -67,8 +46,11 @@ public sealed class PaymentMethodsController : ApiControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
-        var response = await _getPaymentMethodByIdHandler.HandleAsync(new GetPaymentMethodByIdQuery(id), cancellationToken);
-        return SuccessResponse(response);
+        var response = await _mediator.Send(new GetPaymentMethodByIdQuery
+        {
+            Id = id
+        }, cancellationToken);
+        return StatusCode(response.Status, response);
     }
 
     [HttpPost]
@@ -76,12 +58,11 @@ public sealed class PaymentMethodsController : ApiControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<PaymentMethodDto>>> CreatePaymentMethod(
-        [FromBody] CreatePaymentMethodRequestDto request,
+        [FromBody] CreatePaymentMethodCommand command,
         CancellationToken cancellationToken)
     {
-        var applicationRequest = new CreatePaymentMethodRequestDto(request.Code, request.Name, request.IsActive);
-        var response = await _createPaymentMethodHandler.HandleAsync(new CreatePaymentMethodCommand(applicationRequest), cancellationToken);
-        return CreatedResponse($"/api/payment/methods/{response.Id}", response);
+        var response = await _mediator.Send(command, cancellationToken);
+        return Created($"/api/payment/methods/{response.Data!.Id}", response);
     }
 
     [HttpPut("{id:guid}")]
@@ -91,12 +72,11 @@ public sealed class PaymentMethodsController : ApiControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<PaymentMethodDto>>> UpdatePaymentMethod(
         Guid id,
-        [FromBody] UpdatePaymentMethodRequestDto request,
+        [FromBody] UpdatePaymentMethodCommand command,
         CancellationToken cancellationToken)
     {
-        var applicationRequest = new UpdatePaymentMethodRequestDto(request.Name, request.IsActive);
-        var response = await _updatePaymentMethodHandler.HandleAsync(new UpdatePaymentMethodCommand(id, applicationRequest), cancellationToken);
-        return SuccessResponse(response);
+        var response = await _mediator.Send(command with { Id = id }, cancellationToken);
+        return StatusCode(response.Status, response);
     }
 
     [HttpDelete("{id:guid}")]
@@ -104,19 +84,21 @@ public sealed class PaymentMethodsController : ApiControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<DeletePaymentMethodResponse>>> DeletePaymentMethod(Guid id, CancellationToken cancellationToken)
     {
-        var response = await _deletePaymentMethodHandler.HandleAsync(new DeletePaymentMethodCommand(id), cancellationToken);
-        return SuccessResponse(response);
+        var response = await _mediator.Send(new DeletePaymentMethodCommand
+        {
+            Id = id
+        }, cancellationToken);
+        return StatusCode(response.Status, response);
     }
 
     [HttpGet("deleted")]
     [ProducesResponseType(typeof(PagedApiResponse<DeletedPaymentMethodDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PagedApiResponse<DeletedPaymentMethodDto>>> GetDeletedPaymentMethods(
-        [FromQuery] int page = DefaultPage,
-        [FromQuery] int pageSize = DefaultPageSize,
+        [FromQuery] GetDeletedPaymentMethodsQuery query,
         CancellationToken cancellationToken = default)
     {
-        var result = await _getDeletedPaymentMethodsHandler.HandleAsync(new GetDeletedPaymentMethodsQuery(page, pageSize), cancellationToken);
-        return PagedResponse(result.Items, result.Total, result.Page, result.PageSize);
+        var response = await _mediator.Send(query, cancellationToken);
+        return Ok(response);
     }
 }

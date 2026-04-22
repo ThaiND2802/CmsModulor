@@ -2,12 +2,15 @@ using Commerce.Modules.Identity.Application.DTOs.Responses;
 using Commerce.Modules.Identity.Infrastructure;
 using Commerce.Modules.Identity.Infrastructure.Authentication;
 using CommerceCore.Application.Abstractions;
+using CommerceCore.Application.Responses;
 using CommerceCore.SharedKernel.Exceptions;
+using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Commerce.Modules.Identity.Application.Commands.Login;
 
-public sealed class LoginHandler
+public sealed class LoginHandler : IRequestHandler<LoginCommand, ApiResponse<LoginResponse>>
 {
     private readonly IdentityDbContext _dbContext;
     private readonly IPasswordHasherService _passwordHasherService;
@@ -26,22 +29,21 @@ public sealed class LoginHandler
         _dateTimeProvider = dateTimeProvider ?? throw new ArgumentNullException(nameof(dateTimeProvider));
     }
 
-    public async Task<LoginResponse> HandleAsync(LoginCommand command, CancellationToken cancellationToken)
+    public async Task<ApiResponse<LoginResponse>> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(command.Request);
 
-        if (string.IsNullOrWhiteSpace(command.Request.UserName))
+        if (string.IsNullOrWhiteSpace(command.UserName))
         {
             throw new ValidationAppException("Username is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(command.Request.Password))
+        if (string.IsNullOrWhiteSpace(command.Password))
         {
             throw new ValidationAppException("Password is required.");
         }
 
-        var normalizedUserName = command.Request.UserName.Trim().ToUpperInvariant();
+        var normalizedUserName = command.UserName.Trim().ToUpperInvariant();
         var user = await _dbContext.Users
             .FirstOrDefaultAsync(x => x.NormalizedUserName == normalizedUserName, cancellationToken);
 
@@ -50,22 +52,26 @@ public sealed class LoginHandler
             throw new UnauthorizedAppException("The provided username or password is invalid.");
         }
 
-        if (!_passwordHasherService.Verify(user.PasswordHash, command.Request.Password))
+        if (!_passwordHasherService.Verify(user.PasswordHash, command.Password))
         {
             throw new UnauthorizedAppException("The provided username or password is invalid.");
         }
 
         var expiresAtUtc = _jwtTokenService.GetExpirationUtc();
-        var accessToken = _jwtTokenService.CreateToken(user);
+        var accessToken = _jwtTokenService.CreateToken(user, expiresAtUtc);
 
         user.LastLoginAtUtc = _dateTimeProvider.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new LoginResponse
+        return new ApiResponse<LoginResponse>
         {
-            AccessToken = accessToken,
-            TokenType = "Bearer",
-            ExpiresAtUtc = expiresAtUtc
+            Status = StatusCodes.Status200OK,
+            Data = new LoginResponse
+            {
+                AccessToken = accessToken,
+                TokenType = "Bearer",
+                ExpiresAtUtc = expiresAtUtc
+            }
         };
     }
 }

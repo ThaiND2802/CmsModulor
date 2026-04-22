@@ -1,13 +1,15 @@
 using Commerce.Modules.Payment.Application.DTOs.Responses;
 using Commerce.Modules.Payment.Application.Mappings;
 using Commerce.Modules.Payment.Domain;
+using CommerceCore.Application.Responses;
 using CommerceCore.Infrastructure.Persistence.Abstractions;
 using CommerceCore.SharedKernel.Exceptions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Commerce.Modules.Payment.Application.Queries.GetDeletedPaymentMethods;
 
-public sealed class GetDeletedPaymentMethodsHandler
+public sealed class GetDeletedPaymentMethodsHandler : IRequestHandler<GetDeletedPaymentMethodsQuery, PagedApiResponse<DeletedPaymentMethodDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -16,7 +18,7 @@ public sealed class GetDeletedPaymentMethodsHandler
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<(IReadOnlyCollection<DeletedPaymentMethodDto> Items, int Total, int Page, int PageSize)> HandleAsync(
+    public async Task<PagedApiResponse<DeletedPaymentMethodDto>> Handle(
         GetDeletedPaymentMethodsQuery query,
         CancellationToken cancellationToken)
     {
@@ -43,6 +45,16 @@ public sealed class GetDeletedPaymentMethodsHandler
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
-        return (methods.Select(static x => x.ToDeletedPaymentMethodDto()).ToList(), total, query.Page, query.PageSize);
+        return new PagedApiResponse<DeletedPaymentMethodDto>
+        {
+            Status = 200,
+            Data = methods.Select(static x => x.ToDeletedPaymentMethodDto()).ToList(),
+            Pagination = new PaginationMetadata
+            {
+                Total = total,
+                Page = query.Page,
+                PageSize = query.PageSize
+            }
+        };
     }
 }

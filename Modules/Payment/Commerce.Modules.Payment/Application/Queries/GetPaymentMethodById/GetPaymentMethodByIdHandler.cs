@@ -1,13 +1,15 @@
 using Commerce.Modules.Payment.Application.DTOs.Responses;
 using Commerce.Modules.Payment.Application.Mappings;
 using Commerce.Modules.Payment.Domain;
+using CommerceCore.Application.Responses;
 using CommerceCore.Infrastructure.Persistence.Abstractions;
 using CommerceCore.SharedKernel.Exceptions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Commerce.Modules.Payment.Application.Queries.GetPaymentMethodById;
 
-public sealed class GetPaymentMethodByIdHandler
+public sealed class GetPaymentMethodByIdHandler : IRequestHandler<GetPaymentMethodByIdQuery, ApiResponse<PaymentMethodDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -16,7 +18,7 @@ public sealed class GetPaymentMethodByIdHandler
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<PaymentMethodDto> HandleAsync(GetPaymentMethodByIdQuery query, CancellationToken cancellationToken)
+    public async Task<ApiResponse<PaymentMethodDto>> Handle(GetPaymentMethodByIdQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -29,6 +31,10 @@ public sealed class GetPaymentMethodByIdHandler
             throw new NotFoundAppException($"Payment method '{query.Id}' was not found.", "1404");
         }
 
-        return entity.ToPaymentMethodDto();
+        return new ApiResponse<PaymentMethodDto>
+        {
+            Status = 200,
+            Data = entity.ToPaymentMethodDto()
+        };
     }
 }

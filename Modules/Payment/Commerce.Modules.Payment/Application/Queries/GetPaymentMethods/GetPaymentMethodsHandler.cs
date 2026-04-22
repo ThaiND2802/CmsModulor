@@ -1,13 +1,15 @@
 using Commerce.Modules.Payment.Application.DTOs.Responses;
 using Commerce.Modules.Payment.Application.Mappings;
 using Commerce.Modules.Payment.Domain;
+using CommerceCore.Application.Responses;
 using CommerceCore.Infrastructure.Persistence.Abstractions;
 using CommerceCore.SharedKernel.Exceptions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Commerce.Modules.Payment.Application.Queries.GetPaymentMethods;
 
-public sealed class GetPaymentMethodsHandler
+public sealed class GetPaymentMethodsHandler : IRequestHandler<GetPaymentMethodsQuery, PagedApiResponse<PaymentMethodDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -16,7 +18,7 @@ public sealed class GetPaymentMethodsHandler
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<GetPaymentMethodsResult> HandleAsync(GetPaymentMethodsQuery query, CancellationToken cancellationToken)
+    public async Task<PagedApiResponse<PaymentMethodDto>> Handle(GetPaymentMethodsQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -38,10 +40,16 @@ public sealed class GetPaymentMethodsHandler
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
-        return new GetPaymentMethodsResult(
-            methods.Select(static x => x.ToPaymentMethodDto()).ToList(),
-            total,
-            query.Page,
-            query.PageSize);
+        return new PagedApiResponse<PaymentMethodDto>
+        {
+            Status = 200,
+            Data = methods.Select(static x => x.ToPaymentMethodDto()).ToList(),
+            Pagination = new PaginationMetadata
+            {
+                Total = total,
+                Page = query.Page,
+                PageSize = query.PageSize
+            }
+        };
     }
 }
