@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Commerce.Modules.Cart</AssemblyName>
+    <RootNamespace>Commerce.Modules.Cart</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../CommerceCore/SharedKernel/CommerceCore.SharedKernel/CommerceCore.SharedKernel.csproj" />
+    <ProjectReference Include="../../../CommerceCore/Application/CommerceCore.Application/CommerceCore.Application.csproj" />
+    <ProjectReference Include="../../../CommerceCore/FeatureManagement/CommerceCore.FeatureManagement/CommerceCore.FeatureManagement.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

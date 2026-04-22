@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Commerce.Modules.Payment</AssemblyName>
+    <RootNamespace>Commerce.Modules.Payment</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../CommerceCore/SharedKernel/CommerceCore.SharedKernel/CommerceCore.SharedKernel.csproj" />
+    <ProjectReference Include="../../../CommerceCore/Application/CommerceCore.Application/CommerceCore.Application.csproj" />
+    <ProjectReference Include="../../../CommerceCore/Infrastructure/CommerceCore.Infrastructure/CommerceCore.Infrastructure.csproj" />
+    <ProjectReference Include="../../../CommerceCore/FeatureManagement/CommerceCore.FeatureManagement/CommerceCore.FeatureManagement.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

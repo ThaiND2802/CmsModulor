@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>CommerceCore.FeatureManagement</AssemblyName>
+    <RootNamespace>CommerceCore.FeatureManagement</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../SharedKernel/CommerceCore.SharedKernel/CommerceCore.SharedKernel.csproj" />
+    <ProjectReference Include="../../Application/CommerceCore.Application/CommerceCore.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

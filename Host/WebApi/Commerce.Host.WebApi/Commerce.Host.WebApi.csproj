@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <AssemblyName>Commerce.Host.WebApi</AssemblyName>
+    <RootNamespace>Commerce.Host.WebApi</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../CommerceCore/SharedKernel/CommerceCore.SharedKernel/CommerceCore.SharedKernel.csproj" />
+    <ProjectReference Include="../../../CommerceCore/Application/CommerceCore.Application/CommerceCore.Application.csproj" />
+    <ProjectReference Include="../../../CommerceCore/Infrastructure/CommerceCore.Infrastructure/CommerceCore.Infrastructure.csproj" />
+    <ProjectReference Include="../../../CommerceCore/FeatureManagement/CommerceCore.FeatureManagement/CommerceCore.FeatureManagement.csproj" />
+    <ProjectReference Include="../../../CommerceCore/Observability/CommerceCore.Observability/CommerceCore.Observability.csproj" />
+    <ProjectReference Include="../../../Modules/Identity/Commerce.Modules.Identity/Commerce.Modules.Identity.csproj" />
+    <ProjectReference Include="../../../Modules/Catalog/Commerce.Modules.Catalog/Commerce.Modules.Catalog.csproj" />
+    <ProjectReference Include="../../../Modules/Pricing/Commerce.Modules.Pricing/Commerce.Modules.Pricing.csproj" />
+    <ProjectReference Include="../../../Modules/Sale/Commerce.Modules.Sale/Commerce.Modules.Sale.csproj" />
+    <ProjectReference Include="../../../Modules/Cart/Commerce.Modules.Cart/Commerce.Modules.Cart.csproj" />
+    <ProjectReference Include="../../../Modules/Order/Commerce.Modules.Order/Commerce.Modules.Order.csproj" />
+    <ProjectReference Include="../../../Modules/Payment/Commerce.Modules.Payment/Commerce.Modules.Payment.csproj" />
+    <ProjectReference Include="../../../Modules/Shipping/Commerce.Modules.Shipping/Commerce.Modules.Shipping.csproj" />
+    <ProjectReference Include="../../../Modules/Inventory/Commerce.Modules.Inventory/Commerce.Modules.Inventory.csproj" />
+    <ProjectReference Include="../../../Modules/Reporting/Commerce.Modules.Reporting/Commerce.Modules.Reporting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+  </ItemGroup>
+</Project>

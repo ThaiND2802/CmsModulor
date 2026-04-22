@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>CommerceCore.SharedKernel</AssemblyName>
+    <RootNamespace>CommerceCore.SharedKernel</RootNamespace>
+  </PropertyGroup>
+</Project>
