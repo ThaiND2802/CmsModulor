@@ -11,6 +11,8 @@ namespace Commerce.Modules.Identity.Infrastructure.Authentication;
 public sealed class JwtTokenService : IJwtTokenService
 {
     private const string PreferredUserNameClaimType = "preferred_username";
+    private const string RoleClaimType = "role";
+    private const string PermissionClaimType = "permission";
 
     private readonly JwtOptions _options;
     private readonly IDateTimeProvider _dateTimeProvider;
@@ -24,20 +26,25 @@ public sealed class JwtTokenService : IJwtTokenService
         ValidateOptions(_options);
     }
 
-    public string CreateToken(User user, DateTime expiresAtUtc)
+    public string CreateToken(User user, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions, DateTime expiresAtUtc)
     {
         ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(roles);
+        ArgumentNullException.ThrowIfNull(permissions);
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
         var userId = user.Id.ToString();
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId),
-            new Claim(ClaimTypes.Name, user.DisplayName),
-            new Claim(PreferredUserNameClaimType, user.UserName),
-            new Claim(ClaimTypes.NameIdentifier, userId)
+            new(JwtRegisteredClaimNames.Sub, userId),
+            new(ClaimTypes.Name, user.DisplayName),
+            new(PreferredUserNameClaimType, user.UserName),
+            new(ClaimTypes.NameIdentifier, userId)
         };
+
+        claims.AddRange(roles.Select(role => new Claim(RoleClaimType, role)));
+        claims.AddRange(permissions.Select(permission => new Claim(PermissionClaimType, permission)));
 
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,

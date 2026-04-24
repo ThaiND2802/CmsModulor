@@ -41,7 +41,10 @@ internal static class ModelBuilderExtensions
                 SystemSeed.IdentityUserRolesReadPermission,
                 SystemSeed.IdentityUserRolesAssignPermission,
                 SystemSeed.IdentityUserPermissionsReadPermission,
-                SystemSeed.IdentityUserPermissionsAssignPermission);
+                SystemSeed.IdentityUserPermissionsAssignPermission,
+                SystemSeed.IdentityRolePermissionsReadPermission,
+                SystemSeed.IdentityRolePermissionsAssignPermission,
+                SystemSeed.IdentityUsersResetPasswordPermission);
 
         modelBuilder.Entity<UserRole>()
             .HasData(SystemSeed.AdminUserRole, SystemSeed.ManagerUserRole, SystemSeed.CashierUserRole);

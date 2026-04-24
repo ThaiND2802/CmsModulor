@@ -28,21 +28,6 @@ public sealed class CreateUserHandler : IRequestHandler<CreateUserCommand, ApiRe
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (string.IsNullOrWhiteSpace(command.UserName))
-        {
-            throw new ValidationAppException("Username is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(command.DisplayName))
-        {
-            throw new ValidationAppException("Display name is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(command.Password))
-        {
-            throw new ValidationAppException("Password is required.");
-        }
-
         var normalizedUserName = command.UserName.Trim().ToUpperInvariant();
         var userName = command.UserName.Trim();
         var displayName = command.DisplayName.Trim();

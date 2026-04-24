@@ -1,45 +1,41 @@
-`# Identity Module
+# Identity Module
 
-`Modules/Identity` owns the authorization schema for the modular monolith.
+`Modules/Identity` owns authentication, authorization, identity administration, and permission assignment for the modular monolith.
 
 ## Current snapshot
 
-Use this section as the quick-load context for AI assistants.
-
 ### What exists now
 
-- JWT login endpoint exists at `POST /api/identity/login`
+- JWT login, refresh, logout, and change-password flows are implemented
 - JWT bearer authentication is configured in the host
-- JWT signing secrets must be supplied from environment variables or secret storage, not committed `appsettings*.json`
+- Identity controllers are module-gated with `RequireModule("Identity")`
+- permission enforcement uses ASP.NET Core auth plus the database-backed `DbPermissionGate`
 - current user resolution is claims-based through `ICurrentUser`
-- permission enforcement runs through custom middleware, not ASP.NET Core `[Authorize]`
-- runtime authorization uses the database-backed `DbPermissionGate`
-- authorization entities exist: `User`, `Role`, `Permission`, `UserRole`, `RolePermission`, `UserPermission`
+- authorization entities exist: `User`, `Role`, `Permission`, `UserRole`, `RolePermission`, `UserPermission`, `UserSession`
+- EF Core persistence is used through `IdentityDbContext`
+- Identity schema is applied automatically at host startup via `MigrateIdentityModuleAsync()`
 - seed users exist: `admin`, `manager`, `cashier`
 - seed roles exist: `ADMIN`, `MANAGER`, `CASHIER`
-- identity read endpoints currently exist for users and authorization overview
 
 ### Current request pipeline
 
 1. `UseAuthentication()` validates JWT and populates `HttpContext.User`
 2. `UseFeatureGate()` reads endpoint metadata
-3. if an endpoint has `[RequireModule]`, the middleware checks module availability and returns `404` when disabled
-4. if an endpoint has `[RequireFeature]`, the middleware checks feature availability and returns `404` when disabled
-5. if an endpoint has `[RequirePermission]`, the middleware checks authentication first, then permission access
-6. unauthenticated access to a permissioned endpoint returns `401`
+3. `[RequireModule]` returns `404` when the module is disabled
+4. `[RequireFeature]` returns `404` when the feature is disabled
+5. permission-protected endpoints require authenticated access first, then permission access
+6. unauthenticated access to a protected endpoint returns `401`
 7. authenticated access without permission returns `403`
-
-Important: `POST /api/identity/login` is currently not decorated with `[RequireModule("Identity")]`, so the full module-gating path does not apply uniformly to every Identity endpoint.
 
 ### Current user resolution
 
-`ICurrentUser` currently exposes:
+`ICurrentUser` exposes:
 
 - `UserId`
 - `UserName`
 - `IsAuthenticated`
 
-`HeaderCurrentUserAccessor` resolves user data from claims first:
+`HeaderCurrentUserAccessor` resolves user data from claims first.
 
 For `UserId`:
 - `ClaimTypes.NameIdentifier`
@@ -52,10 +48,8 @@ For `UserName`:
 
 In development only, it can fall back to headers:
 
-- `X-Commerce-UserId` (stable `User.Id` GUID)
+- `X-Commerce-UserId`
 - `X-Commerce-UserName`
-
-Important: `ICurrentUser.UserId` is intended to represent the stable persisted `User.Id`, while `UserName` carries the login name.
 
 ### Current permission source
 
@@ -69,102 +63,123 @@ Resolution order:
 4. role allow
 5. default deny
 
-### API coverage now
+## API coverage now
 
 Implemented:
 
 - `POST /api/identity/login`
+- `POST /api/identity/refresh`
+- `POST /api/identity/logout`
+- `POST /api/identity/change-password`
 - `GET /api/identity/users`
+- `POST /api/identity/users`
+- `PUT /api/identity/users/{id}`
+- `DELETE /api/identity/users/{id}`
+- `POST /api/identity/users/{id}/reset-password`
+- `GET /api/identity/roles`
+- `POST /api/identity/roles`
+- `PUT /api/identity/roles/{id}`
+- `DELETE /api/identity/roles/{id}`
+- `GET /api/identity/permissions`
+- `POST /api/identity/permissions`
+- `PUT /api/identity/permissions/{id}`
+- `DELETE /api/identity/permissions/{id}`
+- `GET /api/identity/users/{userId}/roles`
+- `PUT /api/identity/users/{userId}/roles`
+- `GET /api/identity/users/{userId}/permissions`
+- `PUT /api/identity/users/{userId}/permissions`
+- `GET /api/identity/roles/{roleId}/permissions`
+- `PUT /api/identity/roles/{roleId}/permissions`
 - `GET /api/identity/me`
 - `GET /api/identity/my-permissions`
 - `GET /api/identity/authorization/overview`
 - `GET /api/identity/health`
 
-Not implemented yet:
+Still intentionally missing:
 
-- user management write endpoints
-- role management endpoints
-- permission management endpoints
-- role assignment endpoints
-- user direct permission assignment endpoints
-
-### Important design note
-
-Current authorization is metadata-driven with custom attributes such as `[RequirePermission(...)]`. It does not currently rely on ASP.NET Core authorization policies or `[Authorize]` on the module controllers.
-
-### Suggested use for future AI sessions
-
-When extending Identity, assume the current system already has:
-
-- JWT issuance
-- claims-based current user access
-- DB-backed permission evaluation
-- module/feature/permission gate middleware
-
-When planning new work, treat `/me`, `/my-permissions`, and full user/role/permission management APIs as missing scope to be added.
-
-
-## Scope
-
-- authorization entities live in `Modules/Identity`
-- `CommerceCore` stays limited to shared foundation and abstractions
-- persistence reuses the existing `BaseDbContext`, `IRepository<TEntity>`, `BaseRepository<TEntity>`, `IUnitOfWork`, and `UnitOfWork`
-- database wiring comes from the host via `ConnectionStrings:Default`
+- access-token blacklist / immediate access-token revocation
+- forgot-password email/self-service flow
+- session/device management UI
+- management UI or workflow docs for admins
 
 ## Database wiring
 
 The system currently assumes `1 deployment = 1 database`.
 
-`IdentityDbContext` is registered by the host using the shared `ConnectionStrings:Default` value from `Host/WebApi/Commerce.Host.WebApi/appsettings.json`. The shared default database wiring currently uses PostgreSQL via `UseNpgsql`. The module does not read connection strings from configuration directly and does not own provider selection.
+`IdentityDbContext` is registered by the host using `ConnectionStrings:Default`. The shared default database wiring currently uses PostgreSQL via `UseNpgsql`. The module does not read connection strings directly and does not own provider selection.
 
-## Authorization schema
+## Migrations
 
-The module currently defines:
+Identity now owns committed EF Core migrations under `Infrastructure/Persistence/Migrations`.
 
-- aggregate roots: `User`, `Role`, `Permission`
-- association entities: `UserRole`, `RolePermission`, `UserPermission`
-- seed roles: `ADMIN`, `MANAGER`, `CASHIER`
-- seed permissions following `{Module}.{FeatureOrArea}.{Action}`
-- identity domain read permissions:
-  - `Identity.Users.Read`
-  - `Identity.Authorization.Read`
+Runtime behavior:
 
-## Resolution intent
+- the host calls `MigrateIdentityModuleAsync()` during startup
+- the module applies pending Identity migrations through `Database.MigrateAsync()`
+- a clean database should be able to bootstrap the Identity schema and seed data from committed migrations
 
-Authorization is intended to resolve in this order:
+To add a new Identity migration:
 
-1. user direct deny
-2. user direct allow
-3. role deny
-4. role allow
-5. default deny
+```bash
+dotnet ef migrations add <MigrationName> \
+  --context Commerce.Modules.Identity.Infrastructure.IdentityDbContext \
+  --project Modules/Identity/Commerce.Modules.Identity/Commerce.Modules.Identity.csproj \
+  --startup-project Host/WebApi/Commerce.Host.WebApi/Commerce.Host.WebApi.csproj \
+  --output-dir Infrastructure/Persistence/Migrations
+```
 
-Module gating and feature gating still run before authorization. The active runtime permission source is the database-backed `DbPermissionGate`.
+## Seed data and bootstrap rules
+
+The module seeds system users, roles, permissions, and default assignments.
+
+Seeded users:
+
+- `admin`
+- `manager`
+- `cashier`
+
+Important:
+
+- seeded system users do not carry a shared default password in source control
+- seeded credentials must be initialized explicitly outside seed data
+- do not document or commit local bootstrap passwords
+- `ResetUserPassword` currently blocks system users, so if system-user bootstrap is needed it should use a separate explicit setup path instead of relying on a hidden default credential
+
+## Secret handling
+
+JWT secrets must not be committed in `appsettings*.json`.
+
+Use one of these local development approaches instead:
+
+- .NET user secrets
+- environment variables
+
+The app is expected to fail fast when required JWT configuration is missing.
+
+Example local setup with user secrets:
+
+```bash
+dotnet user-secrets set "Jwt:SigningKey" "<your-local-dev-key>" \
+  --project Host/WebApi/Commerce.Host.WebApi/Commerce.Host.WebApi.csproj
+```
 
 ## API conventions
 
-`Identity` now follows the shared API response contract used by controller-based modules:
+`Identity` follows the shared API response contract used by controller-based modules:
 
 - success item/detail responses return `ApiResponse<T>` serialized as `snake_case`
 - list responses return `PagedApiResponse<T>` serialized as `snake_case`
 - handled application errors return `ErrorResponse` with `status`, `error_code`, and `message`
 - list query params use explicit `snake_case` names such as `page`, `page_size`, `search`, `sort_by`, and `desc`
-- login validation failures use `ValidationAppException`
-- invalid credentials use `UnauthorizedAppException`
 
-Current controller coverage:
-
-- `POST /api/identity/login` returns `ApiResponse<LoginResponse>`
-- `GET /api/identity/users` returns `PagedApiResponse<T>` and requires `Identity.Users.Read`
-- `GET /api/identity/authorization/overview` returns `ApiResponse<T>` and requires `Identity.Authorization.Read`
-- `GET /api/identity/health` returns `ApiResponse<T>`
+Logout note: revoking a refresh token does not invalidate already-issued access tokens before their natural expiry.
 
 ## CQRS snapshot
 
-Identity now pilots CQRS with MediatR `IRequest<T>` for login and the current read endpoints.
+Identity uses MediatR `IRequest<T>` handlers for auth flows and management APIs.
 
 - controllers bind directly to command/query models and delegate with `_mediator.Send(...)`
 - command/query inputs use `sealed record` property-based models
 - route parameters stay in the controller and are merged into commands with `with` when needed
-- handlers own the application logic for login, users listing, and authorization overview
-- `PagedListRequest` is the shared base model for list queries
+- handlers own the application logic for auth, users, roles, permissions, and authorization overview
+- FluentValidation is applied through MediatR pipeline behaviors

@@ -15,14 +15,6 @@ public sealed class UserPermissionConfiguration : IEntityTypeConfiguration<UserP
             .HasConversion<int>()
             .IsRequired();
 
-        builder.Property(static x => x.AssignedAtUtc)
-            .IsRequired();
-
-        builder.Property(static x => x.AssignedBy)
-            .HasMaxLength(100);
-
-        builder.Property(static x => x.ExpiresAtUtc);
-
         builder.HasIndex(static x => new { x.UserId, x.PermissionId })
             .IsUnique();
 

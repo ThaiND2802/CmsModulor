@@ -118,7 +118,7 @@ builder.Services.AddModuleIfEnabled(builder.Configuration, "Reporting", (service
 
 var app = builder.Build();
 
-app.Services.InitializeIdentityPersistence();
+await app.Services.MigrateIdentityModuleAsync();
 app.Services.InitializePaymentPersistence();
 
 app.UseCorrelationId();

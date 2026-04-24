@@ -6,7 +6,6 @@ internal static class SystemSeed
 {
     private static readonly DateTime SeededAtUtc = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private const string SystemActor = "system";
-    private const string SeededPasswordHash = "AQAAAAEAAYagAAAAEAThf7YBPd2Y9bNGD4VCNJ+ltWg7NmeW3YQWc+00vdpJKx6WA/RkCM5BHl1ukWnUgQ==";
 
     internal static readonly Guid AdminUserId = Guid.Parse("10000000-0000-0000-0000-000000000001");
     internal static readonly Guid ManagerUserId = Guid.Parse("10000000-0000-0000-0000-000000000002");
@@ -41,6 +40,9 @@ internal static class SystemSeed
     internal static readonly Guid IdentityUserRolesAssignPermissionId = Guid.Parse("30000000-0000-0000-0000-000000000023");
     internal static readonly Guid IdentityUserPermissionsReadPermissionId = Guid.Parse("30000000-0000-0000-0000-000000000024");
     internal static readonly Guid IdentityUserPermissionsAssignPermissionId = Guid.Parse("30000000-0000-0000-0000-000000000025");
+    internal static readonly Guid IdentityRolePermissionsReadPermissionId = Guid.Parse("30000000-0000-0000-0000-000000000026");
+    internal static readonly Guid IdentityRolePermissionsAssignPermissionId = Guid.Parse("30000000-0000-0000-0000-000000000027");
+    internal static readonly Guid IdentityUsersResetPasswordPermissionId = Guid.Parse("30000000-0000-0000-0000-000000000028");
 
     internal static readonly User AdminUser = new()
     {
@@ -50,7 +52,7 @@ internal static class SystemSeed
         DisplayName = "System Administrator",
         Email = "admin@local.test",
         NormalizedEmail = "ADMIN@LOCAL.TEST",
-        PasswordHash = SeededPasswordHash,
+        PasswordHash = null,
         PhoneNumber = "0000000001",
         IsActive = true,
         IsSystem = true,
@@ -67,7 +69,7 @@ internal static class SystemSeed
         DisplayName = "Store Manager",
         Email = "manager@local.test",
         NormalizedEmail = "MANAGER@LOCAL.TEST",
-        PasswordHash = SeededPasswordHash,
+        PasswordHash = null,
         PhoneNumber = "0000000002",
         IsActive = true,
         IsSystem = true,
@@ -84,7 +86,7 @@ internal static class SystemSeed
         DisplayName = "Store Cashier",
         Email = "cashier@local.test",
         NormalizedEmail = "CASHIER@LOCAL.TEST",
-        PasswordHash = SeededPasswordHash,
+        PasswordHash = null,
         PhoneNumber = "0000000003",
         IsActive = true,
         IsSystem = true,
@@ -347,6 +349,36 @@ internal static class SystemSeed
         "Identity",
         250);
 
+    internal static readonly Permission IdentityRolePermissionsReadPermission = CreatePermission(
+        IdentityRolePermissionsReadPermissionId,
+        "Identity.RolePermissions.Read",
+        "Read identity role permissions",
+        "Allows reading identity role permission assignments",
+        "Identity",
+        "RolePermissions",
+        "Identity",
+        260);
+
+    internal static readonly Permission IdentityRolePermissionsAssignPermission = CreatePermission(
+        IdentityRolePermissionsAssignPermissionId,
+        "Identity.RolePermissions.Assign",
+        "Assign identity role permissions",
+        "Allows assigning identity role permissions",
+        "Identity",
+        "RolePermissions",
+        "Identity",
+        270);
+
+    internal static readonly Permission IdentityUsersResetPasswordPermission = CreatePermission(
+        IdentityUsersResetPasswordPermissionId,
+        "Identity.Users.ResetPassword",
+        "Reset identity user passwords",
+        "Allows resetting identity user passwords",
+        "Identity",
+        "Users",
+        "Identity",
+        280);
+
     internal static readonly UserRole AdminUserRole = CreateUserRole(
         Guid.Parse("40000000-0000-0000-0000-000000000001"),
         AdminUserId,
@@ -396,7 +428,10 @@ internal static class SystemSeed
         CreateRolePermission(Guid.Parse("50000000-0000-0000-0000-000000000030"), AdminRoleId, IdentityUserRolesReadPermissionId, PermissionEffect.Allow),
         CreateRolePermission(Guid.Parse("50000000-0000-0000-0000-000000000031"), AdminRoleId, IdentityUserRolesAssignPermissionId, PermissionEffect.Allow),
         CreateRolePermission(Guid.Parse("50000000-0000-0000-0000-000000000032"), AdminRoleId, IdentityUserPermissionsReadPermissionId, PermissionEffect.Allow),
-        CreateRolePermission(Guid.Parse("50000000-0000-0000-0000-000000000033"), AdminRoleId, IdentityUserPermissionsAssignPermissionId, PermissionEffect.Allow)
+        CreateRolePermission(Guid.Parse("50000000-0000-0000-0000-000000000033"), AdminRoleId, IdentityUserPermissionsAssignPermissionId, PermissionEffect.Allow),
+        CreateRolePermission(Guid.Parse("50000000-0000-0000-0000-000000000034"), AdminRoleId, IdentityRolePermissionsReadPermissionId, PermissionEffect.Allow),
+        CreateRolePermission(Guid.Parse("50000000-0000-0000-0000-000000000035"), AdminRoleId, IdentityRolePermissionsAssignPermissionId, PermissionEffect.Allow),
+        CreateRolePermission(Guid.Parse("50000000-0000-0000-0000-000000000036"), AdminRoleId, IdentityUsersResetPasswordPermissionId, PermissionEffect.Allow)
     ];
 
     internal static readonly UserPermission[] UserPermissions =

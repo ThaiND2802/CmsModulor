@@ -1,15 +1,11 @@
-using Commerce.Modules.Identity.Application.Commands.Login;
-using Commerce.Modules.Identity.Application.Queries.GetAuthorizationOverview;
-using Commerce.Modules.Identity.Application.Queries.GetUsers;
-using Commerce.Modules.Identity.Controllers;
 using Commerce.Modules.Identity.Infrastructure;
 using Commerce.Modules.Identity.Infrastructure.Authentication;
 using Commerce.Modules.Identity.Infrastructure.Security;
+using CommerceCore.Application.Behaviors;
 using CommerceCore.FeatureManagement.Abstractions;
 using CommerceCore.Infrastructure.Persistence;
 using CommerceCore.Infrastructure.Persistence.Abstractions;
-using MediatR;
-using Microsoft.AspNetCore.Builder;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,15 +31,18 @@ public static class DependencyInjection
         services.AddScoped<IPermissionGate, DbPermissionGate>();
         services.AddScoped<IPasswordHasherService, PasswordHasherService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddMediatR(configuration =>
         {
             configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+            configuration.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
 
         return services;
     }
 
-    public static IServiceProvider InitializeIdentityPersistence(this IServiceProvider serviceProvider)
+    public static async Task MigrateIdentityModuleAsync(this IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
@@ -51,12 +50,10 @@ public static class DependencyInjection
         var moduleGate = scope.ServiceProvider.GetRequiredService<IModuleGate>();
         if (!moduleGate.IsEnabled("Identity"))
         {
-            return serviceProvider;
+            return;
         }
 
         var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-        dbContext.EnsureSeedDataAsync().GetAwaiter().GetResult();
-
-        return serviceProvider;
+        await dbContext.Database.MigrateAsync(cancellationToken);
     }
 }

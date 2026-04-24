@@ -56,3 +56,5 @@ nunit-*.xml
 #AI
 CLAUDE.md
 .claude/*
+CLAUDE.local.md
+setup-cc.sh

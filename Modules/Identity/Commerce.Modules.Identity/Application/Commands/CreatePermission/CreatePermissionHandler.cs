@@ -23,26 +23,6 @@ public sealed class CreatePermissionHandler : IRequestHandler<CreatePermissionCo
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (string.IsNullOrWhiteSpace(command.Code))
-        {
-            throw new ValidationAppException("Permission code is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(command.Name))
-        {
-            throw new ValidationAppException("Permission name is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(command.Module))
-        {
-            throw new ValidationAppException("Permission module is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(command.GroupName))
-        {
-            throw new ValidationAppException("Permission group name is required.");
-        }
-
         var code = command.Code.Trim().ToUpperInvariant();
         var name = command.Name.Trim();
         var description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim();

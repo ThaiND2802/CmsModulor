@@ -23,16 +23,6 @@ public sealed class CreateRoleHandler : IRequestHandler<CreateRoleCommand, ApiRe
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (string.IsNullOrWhiteSpace(command.Code))
-        {
-            throw new ValidationAppException("Role code is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(command.Name))
-        {
-            throw new ValidationAppException("Role name is required.");
-        }
-
         var code = command.Code.Trim().ToUpperInvariant();
         var name = command.Name.Trim();
         var description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim();

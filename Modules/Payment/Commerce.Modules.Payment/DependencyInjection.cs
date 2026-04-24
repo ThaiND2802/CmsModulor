@@ -1,7 +1,9 @@
 using Commerce.Modules.Payment.Infrastructure;
+using CommerceCore.Application.Behaviors;
 using CommerceCore.FeatureManagement.Abstractions;
 using CommerceCore.Infrastructure.Persistence;
 using CommerceCore.Infrastructure.Persistence.Abstractions;
+using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -26,9 +28,11 @@ public static class DependencyInjection
             options.UseDefaultDatabase(connectionString);
         });
         services.AddScoped<IUnitOfWork, UnitOfWork<PaymentDbContext>>();
+        services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddMediatR(configuration =>
         {
             configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+            configuration.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
 
         return services;

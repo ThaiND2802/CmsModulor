@@ -11,37 +11,6 @@ public sealed class PermissionConfiguration : IEntityTypeConfiguration<Permissio
     {
         builder.HasKey(static x => x.Id);
 
-        builder.Property(static x => x.Code)
-            .HasMaxLength(150)
-            .IsRequired();
-
-        builder.Property(static x => x.Name)
-            .HasMaxLength(200)
-            .IsRequired();
-
-        builder.Property(static x => x.Description)
-            .HasMaxLength(1000);
-
-        builder.Property(static x => x.Module)
-            .HasMaxLength(100)
-            .IsRequired();
-
-        builder.Property(static x => x.Feature)
-            .HasMaxLength(100);
-
-        builder.Property(static x => x.GroupName)
-            .HasMaxLength(100)
-            .IsRequired();
-
-        builder.Property(static x => x.SortOrder)
-            .IsRequired();
-
-        builder.Property(static x => x.IsActive)
-            .IsRequired();
-
-        builder.Property(static x => x.IsSystem)
-            .IsRequired();
-
         builder.HasIndex(static x => x.Code)
             .IsUnique();
 

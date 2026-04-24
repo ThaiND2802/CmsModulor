@@ -11,17 +11,6 @@ public sealed class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
     {
         builder.HasKey(static x => x.Id);
 
-        builder.Property(static x => x.AssignedAtUtc)
-            .IsRequired();
-
-        builder.Property(static x => x.AssignedBy)
-            .HasMaxLength(100);
-
-        builder.Property(static x => x.ExpiresAtUtc);
-
-        builder.Property(static x => x.IsActive)
-            .IsRequired();
-
         builder.HasIndex(static x => new { x.UserId, x.RoleId })
             .IsUnique();
 

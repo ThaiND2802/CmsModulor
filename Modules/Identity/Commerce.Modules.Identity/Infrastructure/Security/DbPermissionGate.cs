@@ -13,11 +13,6 @@ public sealed class DbPermissionGate : IPermissionGate
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    public bool HasPermission(string userId, string permission)
-    {
-        return HasPermissionAsync(userId, permission).GetAwaiter().GetResult();
-    }
-
     public async Task<bool> HasPermissionAsync(
         string userId,
         string permission,

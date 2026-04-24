@@ -13,7 +13,7 @@ public sealed class InMemoryPermissionGate : IPermissionGate
         _optionsMonitor = optionsMonitor;
     }
 
-    public bool HasPermission(string userId, string permission)
+    public Task<bool> HasPermissionAsync(string userId, string permission, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(permission);
@@ -21,14 +21,9 @@ public sealed class InMemoryPermissionGate : IPermissionGate
         var users = _optionsMonitor.CurrentValue.Users;
         if (!users.TryGetValue(userId, out var permissions))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        return permissions.Contains(permission, StringComparer.OrdinalIgnoreCase);
-    }
-
-    public Task<bool> HasPermissionAsync(string userId, string permission, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(HasPermission(userId, permission));
+        return Task.FromResult(permissions.Contains(permission, StringComparer.OrdinalIgnoreCase));
     }
 }

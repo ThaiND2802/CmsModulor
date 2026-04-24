@@ -15,12 +15,6 @@ public sealed class RolePermissionConfiguration : IEntityTypeConfiguration<RoleP
             .HasConversion<int>()
             .IsRequired();
 
-        builder.Property(static x => x.AssignedAtUtc)
-            .IsRequired();
-
-        builder.Property(static x => x.AssignedBy)
-            .HasMaxLength(100);
-
         builder.HasIndex(static x => new { x.RoleId, x.PermissionId })
             .IsUnique();
 

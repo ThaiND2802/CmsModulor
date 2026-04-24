@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Commerce.Modules.Identity.Application.DTOs.Responses;
 using CommerceCore.Application.Responses;
 using MediatR;
@@ -9,6 +8,5 @@ public sealed record SyncUserRolesCommand : IRequest<ApiResponse<UserRoleAssignm
 {
     public Guid UserId { get; init; }
 
-    [Required]
     public IReadOnlyList<Guid> RoleIds { get; init; } = [];
 }

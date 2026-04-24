@@ -4,7 +4,7 @@ namespace Commerce.Modules.Identity.Infrastructure.Authentication;
 
 public interface IJwtTokenService
 {
-    string CreateToken(User user, DateTime expiresAtUtc);
+    string CreateToken(User user, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions, DateTime expiresAtUtc);
 
     DateTime GetExpirationUtc();
 }

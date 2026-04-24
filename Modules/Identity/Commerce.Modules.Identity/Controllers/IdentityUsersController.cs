@@ -1,5 +1,6 @@
 using Commerce.Modules.Identity.Application.Commands.CreateUser;
 using Commerce.Modules.Identity.Application.Commands.DeleteUser;
+using Commerce.Modules.Identity.Application.Commands.ResetUserPassword;
 using Commerce.Modules.Identity.Application.Commands.UpdateUser;
 using Commerce.Modules.Identity.Application.DTOs.Responses;
 using Commerce.Modules.Identity.Application.Queries.GetUserById;
@@ -83,6 +84,18 @@ public sealed class IdentityUsersController : ApiControllerBase
         {
             Id = id
         }, cancellationToken);
+        return StatusCode(response.Status, response);
+    }
+
+    [HttpPost("{id:guid}/reset-password")]
+    [PermissionAuthorize("Identity.Users.ResetPassword")]
+    [ProducesResponseType(typeof(ApiResponse<ResetUserPasswordResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<ResetUserPasswordResponse>>> ResetPassword(
+        Guid id,
+        [FromBody] ResetUserPasswordCommand command,
+        CancellationToken cancellationToken)
+    {
+        var response = await _mediator.Send(command with { Id = id }, cancellationToken);
         return StatusCode(response.Status, response);
     }
 }
