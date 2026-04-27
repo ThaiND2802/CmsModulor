@@ -7,7 +7,24 @@
   <ItemGroup>
     <ProjectReference Include="../../../CommerceCore/SharedKernel/CommerceCore.SharedKernel/CommerceCore.SharedKernel.csproj" />
     <ProjectReference Include="../../../CommerceCore/Application/CommerceCore.Application/CommerceCore.Application.csproj" />
+    <ProjectReference Include="../../../CommerceCore/Infrastructure/CommerceCore.Infrastructure/CommerceCore.Infrastructure.csproj" />
     <ProjectReference Include="../../../CommerceCore/FeatureManagement/CommerceCore.FeatureManagement/CommerceCore.FeatureManagement.csproj" />
+    <ProjectReference Include="../../Catalog/Commerce.Modules.Catalog/Commerce.Modules.Catalog.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="AutoMapper" Version="15.1.1" />
   </ItemGroup>
 
   <ItemGroup>

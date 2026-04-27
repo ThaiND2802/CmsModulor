@@ -36,6 +36,7 @@ var jwtOptions = builder.Configuration
     .GetSection(JwtOptions.SectionName)
     .Get<JwtOptions>()
     ?? throw new InvalidOperationException("Jwt configuration is missing.");
+var applyDatabaseChanges = builder.Configuration.GetValue<bool>("Startup:ApplyDatabaseChanges");
 
 if (string.IsNullOrWhiteSpace(jwtOptions.Issuer)
     || string.IsNullOrWhiteSpace(jwtOptions.Audience)
@@ -48,6 +49,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers()
     .AddApplicationPart(typeof(Commerce.Modules.Identity.DependencyInjection).Assembly)
     .AddApplicationPart(typeof(Commerce.Modules.Payment.DependencyInjection).Assembly)
+    .AddApplicationPart(typeof(Commerce.Modules.Catalog.DependencyInjection).Assembly)
+    .AddApplicationPart(typeof(Commerce.Modules.Order.DependencyInjection).Assembly)
+    .AddApplicationPart(typeof(Commerce.Modules.Inventory.DependencyInjection).Assembly)
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
@@ -64,11 +68,24 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
                 : error.ErrorMessage)
             .FirstOrDefault() ?? "The request payload is invalid.";
 
+        var errors = context.ModelState
+            .Where(static entry => entry.Value?.Errors.Count > 0)
+            .ToDictionary(
+                static entry => entry.Key,
+                static entry => (IReadOnlyList<string>)entry.Value!.Errors
+                    .Select(static error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? "The request payload is invalid."
+                        : error.ErrorMessage)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList(),
+                StringComparer.OrdinalIgnoreCase);
+
         return new BadRequestObjectResult(new ErrorResponse
         {
             Status = StatusCodes.Status400BadRequest,
             ErrorCode = "1001",
-            Message = firstError
+            Message = firstError,
+            Errors = errors
         });
     };
 });
@@ -106,20 +123,30 @@ builder.Services.AddCommerceInfrastructure(builder.Configuration);
 builder.Services.AddCommerceFeatureManagement(builder.Configuration);
 builder.Services.AddCommerceObservability();
 builder.Services.AddModuleIfEnabled(builder.Configuration, "Identity", (services, configuration) => services.AddIdentityModule(configuration, connectionString));
-builder.Services.AddModuleIfEnabled(builder.Configuration, "Catalog", (services, configuration) => services.AddCatalogModule(configuration));
+builder.Services.AddModuleIfEnabled(builder.Configuration, "Catalog", (services, configuration) => services.AddCatalogModule(configuration, connectionString));
 builder.Services.AddModuleIfEnabled(builder.Configuration, "Pricing", (services, configuration) => services.AddPricingModule(configuration));
-builder.Services.AddModuleIfEnabled(builder.Configuration, "Sale", (services, configuration) => services.AddSaleModule(configuration));
+builder.Services.AddModuleIfEnabled(builder.Configuration, "Sale", (services, configuration) => services.AddSaleModule(configuration, connectionString));
 builder.Services.AddModuleIfEnabled(builder.Configuration, "Cart", (services, configuration) => services.AddCartModule(configuration));
-builder.Services.AddModuleIfEnabled(builder.Configuration, "Order", (services, configuration) => services.AddOrderModule(configuration));
+builder.Services.AddModuleIfEnabled(builder.Configuration, "Order", (services, configuration) => services.AddOrderModule(configuration, connectionString));
 builder.Services.AddModuleIfEnabled(builder.Configuration, "Payment", (services, configuration) => services.AddPaymentModule(configuration, connectionString));
 builder.Services.AddModuleIfEnabled(builder.Configuration, "Shipping", (services, configuration) => services.AddShippingModule(configuration));
-builder.Services.AddModuleIfEnabled(builder.Configuration, "Inventory", (services, configuration) => services.AddInventoryModule(configuration));
+builder.Services.AddModuleIfEnabled(builder.Configuration, "Inventory", (services, configuration) => services.AddInventoryModule(configuration, connectionString));
 builder.Services.AddModuleIfEnabled(builder.Configuration, "Reporting", (services, configuration) => services.AddReportingModule(configuration));
 
 var app = builder.Build();
 
-await app.Services.MigrateIdentityModuleAsync();
-app.Services.InitializePaymentPersistence();
+if (applyDatabaseChanges)
+{
+    await app.Services.MigrateIdentityModuleAsync();
+    await app.Services.MigrateCatalogModuleAsync();
+    await app.Services.MigrateSaleModuleAsync();
+    await app.Services.MigrateOrderModuleAsync();
+    await app.Services.MigrateInventoryModuleAsync();
+    await app.Services.SeedSalePermissionsAsync();
+    await app.Services.SeedOrderPermissionsAsync();
+    await app.Services.SeedInventoryPermissionsAsync();
+    await app.Services.InitializePaymentPersistenceAsync();
+}
 
 app.UseCorrelationId();
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();

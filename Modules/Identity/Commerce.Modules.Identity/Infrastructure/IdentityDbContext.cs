@@ -33,6 +33,8 @@ public sealed class IdentityDbContext : BaseDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<UserSession>()
+            .HasQueryFilter(static session => !session.User.IsDeleted);
         modelBuilder.ApplyIdentityAuthorizationSeed();
     }
 }

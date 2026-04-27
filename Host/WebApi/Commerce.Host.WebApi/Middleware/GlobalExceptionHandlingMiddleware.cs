@@ -69,7 +69,10 @@ public sealed class GlobalExceptionHandlingMiddleware
         {
             Status = status,
             ErrorCode = errorCode,
-            Message = message
+            Message = message,
+            Errors = exception is ValidationAppException validationException
+                ? validationException.Errors
+                : null
         };
 
         await context.Response.WriteAsJsonAsync(response, context.RequestAborted);

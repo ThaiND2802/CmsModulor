@@ -1,0 +1,103 @@
+@baseUrl = http://localhost:5000
+@token = REPLACE_WITH_BEARER_TOKEN
+@variantId = REPLACE_WITH_ACTIVE_VARIANT_ID
+@saleId = 00000000-0000-0000-0000-000000000000
+
+### 1. Create sale draft
+POST {{baseUrl}}/api/sale/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customerId": null,
+  "customerEmail": "buyer@example.com",
+  "customerPhone": "0123456789",
+  "notes": "Sale MVP happy-path",
+  "shippingAddress": null,
+  "billingAddress": null,
+  "items": [],
+  "shippingAmount": 0,
+  "discountAmount": 0,
+  "taxAmount": 0,
+  "expiresAtUtc": null,
+  "currency": "USD"
+}
+
+### Copy `data.id` from step 1 into `@saleId`, then run step 2
+POST {{baseUrl}}/api/sale/sales/{{saleId}}/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "variantId": "{{variantId}}",
+  "quantity": 2,
+  "discountAmount": 0
+}
+
+### 3. Update customer
+PATCH {{baseUrl}}/api/sale/sales/{{saleId}}/customer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customerId": null,
+  "customerEmail": "buyer@example.com",
+  "customerPhone": "0123456789"
+}
+
+### 4. Update addresses
+PATCH {{baseUrl}}/api/sale/sales/{{saleId}}/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "shippingAddress": {
+    "fullName": "John Doe",
+    "phoneNumber": "0123456789",
+    "addressLine1": "123 Main St",
+    "addressLine2": null,
+    "city": "Ho Chi Minh City",
+    "state": null,
+    "postalCode": "700000",
+    "country": "VN"
+  },
+  "billingAddress": {
+    "fullName": "John Doe",
+    "phoneNumber": "0123456789",
+    "addressLine1": "123 Main St",
+    "addressLine2": null,
+    "city": "Ho Chi Minh City",
+    "state": null,
+    "postalCode": "700000",
+    "country": "VN"
+  }
+}
+
+### 5. Reprice sale
+POST {{baseUrl}}/api/sale/sales/{{saleId}}/reprice
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "discountAmount": 0,
+  "shippingAmount": 5,
+  "taxAmount": 1
+}
+
+### 6. Validate stock
+POST {{baseUrl}}/api/sale/sales/{{saleId}}/validate-stock
+Authorization: Bearer {{token}}
+
+### 7. Submit sale
+POST {{baseUrl}}/api/sale/sales/{{saleId}}/submit
+Authorization: Bearer {{token}}
+
+### 8. Verify sale detail
+GET {{baseUrl}}/api/sale/sales/{{saleId}}
+Authorization: Bearer {{token}}
+
+### 9. Verify order created
+### Copy `data.orderId` from step 8 into `@orderId`, then query the Order module.
+@orderId = 00000000-0000-0000-0000-000000000000
+GET {{baseUrl}}/api/order/orders/{{orderId}}
+Authorization: Bearer {{token}}

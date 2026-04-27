@@ -34,10 +34,23 @@ public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidat
             return await next();
         }
 
-        var firstErrorMessage = failures
-            .Select(static x => x.ErrorMessage)
+        var errors = failures
+            .GroupBy(
+                static x => string.IsNullOrWhiteSpace(x.PropertyName) ? string.Empty : x.PropertyName,
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                static group => group.Key,
+                static group => (IReadOnlyList<string>)group
+                    .Select(static x => x.ErrorMessage)
+                    .Where(static x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var firstErrorMessage = errors
+            .SelectMany(static x => x.Value)
             .FirstOrDefault(static x => !string.IsNullOrWhiteSpace(x));
 
-        throw new ValidationAppException(firstErrorMessage ?? "The request payload is invalid.");
+        throw new ValidationAppException(firstErrorMessage ?? "The request payload is invalid.", errors);
     }
 }

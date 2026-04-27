@@ -7,4 +7,6 @@ public sealed class ErrorResponse
     public string ErrorCode { get; init; } = string.Empty;
 
     public string Message { get; init; } = string.Empty;
+
+    public IReadOnlyDictionary<string, IReadOnlyList<string>>? Errors { get; init; }
 }

@@ -38,7 +38,9 @@ public static class DependencyInjection
         return services;
     }
 
-    public static IServiceProvider InitializePaymentPersistence(this IServiceProvider serviceProvider)
+    public static async Task InitializePaymentPersistenceAsync(
+        this IServiceProvider serviceProvider,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
@@ -46,12 +48,10 @@ public static class DependencyInjection
         var moduleGate = scope.ServiceProvider.GetRequiredService<IModuleGate>();
         if (!moduleGate.IsEnabled("Payment"))
         {
-            return serviceProvider;
+            return;
         }
 
         var dbContext = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
-        dbContext.EnsureSeedDataAsync().GetAwaiter().GetResult();
-
-        return serviceProvider;
+        await dbContext.EnsureSeedDataAsync(cancellationToken);
     }
 }
