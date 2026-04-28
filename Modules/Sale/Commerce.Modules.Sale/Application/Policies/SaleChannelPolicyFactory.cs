@@ -10,8 +10,8 @@ public sealed class SaleChannelPolicyFactory
         {
             SaleChannel.Web => new WebChannelPolicy(),
             SaleChannel.Pos => new PosChannelPolicy(),
-            SaleChannel.Admin => new AdminChannelPolicy(),
-            SaleChannel.Social => new SocialChannelPolicy(),
+            SaleChannel.Admin or SaleChannel.Social => throw new InvalidOperationException(
+                $"Channel '{channel}' is disabled in the MVP runtime."),
             _ => throw new ArgumentOutOfRangeException(nameof(channel), channel, "Unknown channel")
         };
     }

@@ -61,7 +61,9 @@ public sealed class GetSalesDashboardHandlerTests
                 Id = Guid.NewGuid(),
                 SaleNumber = "SALE-003",
                 CustomerEmail = "test3@example.com",
-                Status = SaleStatus.AwaitingPayment,
+                Status = SaleStatus.Priced,
+                PaymentMethod = PaymentMethod.CreditCard,
+                PaymentStatus = PaymentStatus.Unpaid,
                 Currency = "USD",
                 TotalAmount = 150m,
                 CreatedAtUtc = DateTime.UtcNow.AddHours(-3)
@@ -71,7 +73,8 @@ public sealed class GetSalesDashboardHandlerTests
                 Id = Guid.NewGuid(),
                 SaleNumber = "SALE-004",
                 CustomerEmail = "test4@example.com",
-                Status = SaleStatus.Paid,
+                Status = SaleStatus.Priced,
+                PaymentStatus = PaymentStatus.Paid,
                 Currency = "USD",
                 TotalAmount = 300m,
                 PaidAmount = 300m,
@@ -82,7 +85,8 @@ public sealed class GetSalesDashboardHandlerTests
                 Id = Guid.NewGuid(),
                 SaleNumber = "SALE-005",
                 CustomerEmail = "test5@example.com",
-                Status = SaleStatus.Paid,
+                Status = SaleStatus.Submitted,
+                PaymentStatus = PaymentStatus.Paid,
                 Currency = "USD",
                 TotalAmount = 500m,
                 PaidAmount = 500m,
@@ -120,14 +124,12 @@ public sealed class GetSalesDashboardHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.TotalDraftSales.Should().Be(1);
-        result.TotalPricedSales.Should().Be(1);
-        result.TotalAwaitingPayment.Should().Be(1);
-        result.TotalPaidSales.Should().Be(2);
-        result.TotalSubmittedSales.Should().Be(1);
-        result.TotalExpiredSales.Should().Be(1);
+        result.DraftSales.Should().Be(1);
+        result.PricedSales.Should().Be(3);
+        result.SubmittedSales.Should().Be(2);
+        result.CancelledSales.Should().Be(0);
+        result.ExpiredSales.Should().Be(1);
         result.TotalRevenue.Should().Be(800m); // 300 + 500
-        result.AverageOrderValue.Should().Be(400m); // 800 / 2
         result.RecentSales.Should().HaveCountLessOrEqualTo(10);
         result.RecentSales.Should().BeInDescendingOrder(s => s.CreatedAtUtc);
     }
@@ -143,14 +145,12 @@ public sealed class GetSalesDashboardHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.TotalDraftSales.Should().Be(0);
-        result.TotalPricedSales.Should().Be(0);
-        result.TotalAwaitingPayment.Should().Be(0);
-        result.TotalPaidSales.Should().Be(0);
-        result.TotalSubmittedSales.Should().Be(0);
-        result.TotalExpiredSales.Should().Be(0);
+        result.DraftSales.Should().Be(0);
+        result.PricedSales.Should().Be(0);
+        result.SubmittedSales.Should().Be(0);
+        result.CancelledSales.Should().Be(0);
+        result.ExpiredSales.Should().Be(0);
         result.TotalRevenue.Should().Be(0);
-        result.AverageOrderValue.Should().Be(0);
         result.RecentSales.Should().BeEmpty();
     }
 
@@ -165,7 +165,8 @@ public sealed class GetSalesDashboardHandlerTests
                 Id = Guid.NewGuid(),
                 SaleNumber = "SALE-001",
                 CustomerEmail = "test1@example.com",
-                Status = SaleStatus.Paid,
+                Status = SaleStatus.Priced,
+                PaymentStatus = PaymentStatus.Paid,
                 Currency = "USD",
                 TotalAmount = 100m,
                 PaidAmount = 100m,
@@ -177,7 +178,8 @@ public sealed class GetSalesDashboardHandlerTests
                 Id = Guid.NewGuid(),
                 SaleNumber = "SALE-002",
                 CustomerEmail = "test2@example.com",
-                Status = SaleStatus.Paid,
+                Status = SaleStatus.Submitted,
+                PaymentStatus = PaymentStatus.Paid,
                 Currency = "USD",
                 TotalAmount = 200m,
                 PaidAmount = 200m,
@@ -195,7 +197,7 @@ public sealed class GetSalesDashboardHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.TotalPaidSales.Should().Be(1);
+        result.SubmittedSales.Should().Be(0);
         result.TotalRevenue.Should().Be(100m);
     }
 }

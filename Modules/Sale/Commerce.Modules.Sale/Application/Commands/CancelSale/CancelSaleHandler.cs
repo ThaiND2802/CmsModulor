@@ -27,6 +27,7 @@ public sealed class CancelSaleHandler : IRequestHandler<CancelSaleCommand, ApiRe
         SaleSubmissionService.EnsureCanCancel(sale);
 
         var previousStatus = sale.Status;
+        SaleLifecycleTransitions.EnsureCanTransition(previousStatus, SaleStatus.Cancelled, "cancel");
         sale.Status = SaleStatus.Cancelled;
         _saleSubmissionService.AppendStatusHistory(
             sale,

@@ -1,4 +1,5 @@
 using Commerce.Modules.Sale.Application.DTOs.Responses;
+using Commerce.Modules.Sale.Domain;
 using Commerce.Modules.Sale.Infrastructure;
 using CommerceCore.SharedKernel.Exceptions;
 using MediatR;
@@ -38,53 +39,12 @@ public sealed class GetSaleTimelineHandler : IRequestHandler<GetSaleTimelineQuer
         // Status changes
         foreach (var history in sale.StatusHistory.OrderBy(h => h.ChangedAtUtc))
         {
-            events.Add(new SaleTimelineEventDto
+            if (!TryMapStatusHistoryEvent(history, out var timelineEvent))
             {
-                OccurredAtUtc = history.ChangedAtUtc,
-                EventType = "StatusChanged",
-                Description = $"Status changed from {history.FromStatus} to {history.ToStatus}",
-                Actor = history.ChangedBy,
-                Metadata = new Dictionary<string, object>
-                {
-                    ["FromStatus"] = history.FromStatus.ToString(),
-                    ["ToStatus"] = history.ToStatus.ToString()
-                }
-            });
-        }
+                continue;
+            }
 
-        // Coupon applied
-        if (!string.IsNullOrWhiteSpace(sale.CouponCode))
-        {
-            events.Add(new SaleTimelineEventDto
-            {
-                OccurredAtUtc = sale.UpdatedAtUtc ?? sale.CreatedAtUtc,
-                EventType = "CouponApplied",
-                Description = $"Coupon '{sale.CouponCode}' applied",
-                Actor = sale.UpdatedBy,
-                Metadata = new Dictionary<string, object>
-                {
-                    ["CouponCode"] = sale.CouponCode,
-                    ["CouponType"] = sale.CouponType ?? string.Empty,
-                    ["DiscountAmount"] = sale.CouponDiscountAmount
-                }
-            });
-        }
-
-        // Payment initiated
-        if (sale.PaymentInitiatedAtUtc.HasValue)
-        {
-            events.Add(new SaleTimelineEventDto
-            {
-                OccurredAtUtc = sale.PaymentInitiatedAtUtc.Value,
-                EventType = "PaymentInitiated",
-                Description = $"Payment initiated via {sale.PaymentMethod}",
-                Actor = sale.UpdatedBy,
-                Metadata = new Dictionary<string, object>
-                {
-                    ["PaymentMethod"] = sale.PaymentMethod.ToString(),
-                    ["PaymentReference"] = sale.PaymentReference ?? string.Empty
-                }
-            });
+            events.Add(timelineEvent);
         }
 
         // Payment completed
@@ -93,42 +53,15 @@ public sealed class GetSaleTimelineHandler : IRequestHandler<GetSaleTimelineQuer
             events.Add(new SaleTimelineEventDto
             {
                 OccurredAtUtc = sale.PaidAtUtc.Value,
-                EventType = "PaymentCompleted",
-                Description = $"Payment completed: {sale.PaidAmount:C}",
+                EventType = "PaymentMarkedPaid",
+                Description = $"Payment marked paid: {sale.PaidAmount:C}",
                 Actor = sale.UpdatedBy,
                 Metadata = new Dictionary<string, object>
                 {
                     ["PaidAmount"] = sale.PaidAmount,
+                    ["PaymentMethod"] = sale.PaymentMethod.ToString(),
                     ["PaymentReference"] = sale.PaymentReference ?? string.Empty
                 }
-            });
-        }
-
-        // Submitted
-        if (sale.SubmittedAtUtc.HasValue)
-        {
-            events.Add(new SaleTimelineEventDto
-            {
-                OccurredAtUtc = sale.SubmittedAtUtc.Value,
-                EventType = "SaleSubmitted",
-                Description = "Sale submitted",
-                Actor = sale.UpdatedBy,
-                Metadata = new Dictionary<string, object>
-                {
-                    ["OrderId"] = sale.OrderId?.ToString() ?? string.Empty
-                }
-            });
-        }
-
-        // Expired
-        if (sale.ExpiresAtUtc.HasValue && sale.Status == Domain.SaleStatus.Expired)
-        {
-            events.Add(new SaleTimelineEventDto
-            {
-                OccurredAtUtc = sale.ExpiresAtUtc.Value,
-                EventType = "SaleExpired",
-                Description = "Sale expired",
-                Actor = "System"
             });
         }
 
@@ -138,5 +71,43 @@ public sealed class GetSaleTimelineHandler : IRequestHandler<GetSaleTimelineQuer
             SaleNumber = sale.SaleNumber,
             Events = events.OrderBy(e => e.OccurredAtUtc).ToList()
         };
+    }
+
+    private static bool TryMapStatusHistoryEvent(SaleStatusHistory history, out SaleTimelineEventDto timelineEvent)
+    {
+        timelineEvent = null!;
+
+        switch (history.ToStatus)
+        {
+            case Domain.SaleStatus.Priced when history.FromStatus != Domain.SaleStatus.Draft:
+                timelineEvent = new SaleTimelineEventDto
+                {
+                    OccurredAtUtc = history.ChangedAtUtc,
+                    EventType = "SaleRepriced",
+                    Description = "Sale repriced",
+                    Actor = history.ChangedBy
+                };
+                return true;
+            case Domain.SaleStatus.Submitted:
+                timelineEvent = new SaleTimelineEventDto
+                {
+                    OccurredAtUtc = history.ChangedAtUtc,
+                    EventType = "SaleSubmitted",
+                    Description = "Sale submitted",
+                    Actor = history.ChangedBy
+                };
+                return true;
+            case Domain.SaleStatus.Cancelled:
+                timelineEvent = new SaleTimelineEventDto
+                {
+                    OccurredAtUtc = history.ChangedAtUtc,
+                    EventType = "SaleCancelled",
+                    Description = "Sale cancelled",
+                    Actor = history.ChangedBy
+                };
+                return true;
+            default:
+                return false;
+        }
     }
 }

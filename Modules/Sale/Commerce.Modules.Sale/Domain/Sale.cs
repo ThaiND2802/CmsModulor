@@ -97,7 +97,7 @@ public sealed class Sale : IAuditableEntity, ISoftDelete
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.None;
 
     [Column("payment_status")]
-    public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.None;
+    public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
 
     [Column("paid_amount")]
     public decimal PaidAmount { get; set; }
@@ -151,36 +151,21 @@ public sealed class Sale : IAuditableEntity, ISoftDelete
 
     public void SelectPaymentMethod(PaymentMethod method)
     {
-        if (Status is not (SaleStatus.Priced or SaleStatus.AwaitingPayment))
+        if (Status != SaleStatus.Priced)
             throw new InvalidOperationException($"Cannot select payment method in {Status} status");
 
         PaymentMethod = method;
     }
 
-    public void InitiatePayment(string? reference = null)
-    {
-        if (Status is not (SaleStatus.Priced or SaleStatus.AwaitingPayment))
-            throw new InvalidOperationException($"Cannot initiate payment in {Status} status");
-
-        if (PaymentMethod == PaymentMethod.None)
-            throw new InvalidOperationException("Payment method must be selected before initiating payment");
-
-        Status = SaleStatus.AwaitingPayment;
-        PaymentStatus = PaymentStatus.Processing;
-        PaymentReference = reference;
-        PaymentInitiatedAtUtc = DateTime.UtcNow;
-    }
-
     public void MarkPaid(decimal amount, string? reference = null)
     {
-        if (Status == SaleStatus.Paid && PaymentStatus == PaymentStatus.Completed)
+        if (PaymentStatus == PaymentStatus.Paid)
             return; // Idempotent
 
-        if (Status is not (SaleStatus.AwaitingPayment or SaleStatus.Priced))
+        if (Status != SaleStatus.Priced)
             throw new InvalidOperationException($"Cannot mark paid in {Status} status");
 
-        Status = SaleStatus.Paid;
-        PaymentStatus = PaymentStatus.Completed;
+        PaymentStatus = PaymentStatus.Paid;
         PaidAmount = amount;
         if (!string.IsNullOrWhiteSpace(reference))
             PaymentReference = reference;

@@ -32,7 +32,7 @@ public sealed class MarkSalePaidHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AwaitingPaymentSale_MarksPaid()
+    public async Task Handle_PricedSale_WithSelectedPaymentMethod_MarksPaid()
     {
         // Arrange
         var sale = new Domain.Sale
@@ -40,8 +40,9 @@ public sealed class MarkSalePaidHandlerTests
             Id = Guid.NewGuid(),
             SaleNumber = "SALE-001",
             CustomerEmail = "test@example.com",
-            Status = SaleStatus.AwaitingPayment,
+            Status = SaleStatus.Priced,
             PaymentMethod = PaymentMethod.CreditCard,
+            PaymentStatus = PaymentStatus.Unpaid,
             Currency = "USD",
             TotalAmount = 100m,
             CreatedAtUtc = DateTime.UtcNow
@@ -57,8 +58,8 @@ public sealed class MarkSalePaidHandlerTests
         // Assert
         var updated = await _context.Sales.FindAsync(sale.Id);
         updated.Should().NotBeNull();
-        updated!.Status.Should().Be(SaleStatus.Paid);
-        updated.PaymentStatus.Should().Be(PaymentStatus.Completed);
+        updated!.Status.Should().Be(SaleStatus.Priced);
+        updated.PaymentStatus.Should().Be(PaymentStatus.Paid);
         updated.PaidAmount.Should().Be(100m);
         updated.PaymentReference.Should().Be("REF-12345");
         updated.PaidAtUtc.Should().NotBeNull();
@@ -90,8 +91,8 @@ public sealed class MarkSalePaidHandlerTests
         // Assert
         var updated = await _context.Sales.FindAsync(sale.Id);
         updated.Should().NotBeNull();
-        updated!.Status.Should().Be(SaleStatus.Paid);
-        updated.PaymentStatus.Should().Be(PaymentStatus.Completed);
+        updated!.Status.Should().Be(SaleStatus.Priced);
+        updated.PaymentStatus.Should().Be(PaymentStatus.Paid);
         updated.PaidAmount.Should().Be(50m);
     }
 
@@ -104,8 +105,8 @@ public sealed class MarkSalePaidHandlerTests
             Id = Guid.NewGuid(),
             SaleNumber = "SALE-003",
             CustomerEmail = "test@example.com",
-            Status = SaleStatus.Paid,
-            PaymentStatus = PaymentStatus.Completed,
+            Status = SaleStatus.Priced,
+            PaymentStatus = PaymentStatus.Paid,
             PaymentMethod = PaymentMethod.CreditCard,
             PaidAmount = 100m,
             PaymentReference = "REF-ORIGINAL",
@@ -126,8 +127,8 @@ public sealed class MarkSalePaidHandlerTests
         // Assert
         var updated = await _context.Sales.FindAsync(sale.Id);
         updated.Should().NotBeNull();
-        updated!.Status.Should().Be(SaleStatus.Paid);
-        updated.PaymentStatus.Should().Be(PaymentStatus.Completed);
+        updated!.Status.Should().Be(SaleStatus.Priced);
+        updated.PaymentStatus.Should().Be(PaymentStatus.Paid);
         updated.PaidAmount.Should().Be(100m);
         updated.PaymentReference.Should().Be("REF-ORIGINAL"); // Should not change
         updated.PaidAtUtc.Should().Be(originalPaidAt); // Should not change

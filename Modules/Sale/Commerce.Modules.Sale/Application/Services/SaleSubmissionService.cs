@@ -59,14 +59,24 @@ public sealed class SaleSubmissionService
     {
         ArgumentNullException.ThrowIfNull(sale);
 
+        if (sale.Status == SaleStatus.Submitted)
+        {
+            return;
+        }
+
         if (sale.Status == SaleStatus.Expired || sale.IsExpired(DateTime.UtcNow))
         {
             throw new BusinessRuleAppException("Expired sales cannot be submitted.");
         }
 
-        if (!sale.CanSubmit())
+        if (sale.Status == SaleStatus.Cancelled)
         {
-            throw new BusinessRuleAppException("Only priced sales without an existing order can be submitted.");
+            throw new BusinessRuleAppException("Cancelled sales cannot be submitted.");
+        }
+
+        if (sale.Status != SaleStatus.Priced || sale.OrderId.HasValue)
+        {
+            throw new BusinessRuleAppException("Only priced sales can be submitted unless already submitted.");
         }
 
         if (sale.Items.Count == 0)
@@ -94,7 +104,7 @@ public sealed class SaleSubmissionService
     {
         ArgumentNullException.ThrowIfNull(sale);
 
-        if (!sale.CanCancel())
+        if (!SaleLifecycleTransitions.CanTransition(sale.Status, SaleStatus.Cancelled))
         {
             throw new BusinessRuleAppException("Only draft or priced sales can be cancelled.");
         }
@@ -114,6 +124,8 @@ public sealed class SaleSubmissionService
             return new SaleStockValidationDto(
                 sale.Id,
                 true,
+                false,
+                "preview_only",
                 null,
                 Array.Empty<SaleStockValidationItemDto>());
         }
@@ -125,6 +137,8 @@ public sealed class SaleSubmissionService
         return new SaleStockValidationDto(
             sale.Id,
             true,
+            false,
+            "preview_only",
             response?.Id.ToString(),
             reservationItems
                 .Select(static item => new SaleStockValidationItemDto(item.VariantId, item.Quantity, true, null))

@@ -20,6 +20,7 @@ public sealed class OverrideSalePriceHandler : IRequestHandler<OverrideSalePrice
     private readonly ISalePricingService _salePricingService;
     private readonly SaleSubmissionService _saleSubmissionService;
     private readonly IPermissionGate _permissionGate;
+    private readonly IFeatureGate _featureGate;
     private readonly ICurrentUser _currentUser;
     private readonly IMapper _mapper;
 
@@ -28,6 +29,7 @@ public sealed class OverrideSalePriceHandler : IRequestHandler<OverrideSalePrice
         ISalePricingService salePricingService,
         SaleSubmissionService saleSubmissionService,
         IPermissionGate permissionGate,
+        IFeatureGate featureGate,
         ICurrentUser currentUser,
         IMapper mapper)
     {
@@ -35,6 +37,7 @@ public sealed class OverrideSalePriceHandler : IRequestHandler<OverrideSalePrice
         _salePricingService = salePricingService ?? throw new ArgumentNullException(nameof(salePricingService));
         _saleSubmissionService = saleSubmissionService ?? throw new ArgumentNullException(nameof(saleSubmissionService));
         _permissionGate = permissionGate ?? throw new ArgumentNullException(nameof(permissionGate));
+        _featureGate = featureGate ?? throw new ArgumentNullException(nameof(featureGate));
         _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
     }
@@ -42,6 +45,11 @@ public sealed class OverrideSalePriceHandler : IRequestHandler<OverrideSalePrice
     public async Task<ApiResponse<SaleDto>> Handle(OverrideSalePriceCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        if (!await _featureGate.IsEnabledAsync("Sale.OverridePrice", cancellationToken))
+        {
+            throw new NotFoundAppException("Price override is disabled in the MVP runtime.");
+        }
 
         if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.UserId))
         {

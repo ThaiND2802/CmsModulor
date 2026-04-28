@@ -21,9 +21,9 @@ public sealed class GetSalesDashboardHandler : IRequestHandler<GetSalesDashboard
             .Where(s => !s.IsDeleted)
             .ToListAsync(cancellationToken);
 
-        var paidSales = sales.Where(s => s.Status == SaleStatus.Paid).ToList();
-        var totalRevenue = paidSales.Sum(s => s.TotalAmount);
-        var averageOrderValue = paidSales.Any() ? totalRevenue / paidSales.Count : 0;
+        var totalRevenue = sales
+            .Where(s => s.PaymentStatus == PaymentStatus.Paid)
+            .Sum(s => s.TotalAmount);
 
         var recentSales = sales
             .OrderByDescending(s => s.CreatedAtUtc)
@@ -42,14 +42,12 @@ public sealed class GetSalesDashboardHandler : IRequestHandler<GetSalesDashboard
 
         return new SalesDashboardDto
         {
-            TotalDraftSales = sales.Count(s => s.Status == SaleStatus.Draft),
-            TotalPricedSales = sales.Count(s => s.Status == SaleStatus.Priced),
-            TotalAwaitingPayment = sales.Count(s => s.Status == SaleStatus.AwaitingPayment),
-            TotalPaidSales = paidSales.Count,
-            TotalSubmittedSales = sales.Count(s => s.Status == SaleStatus.Submitted),
-            TotalExpiredSales = sales.Count(s => s.Status == SaleStatus.Expired),
+            DraftSales = sales.Count(s => s.Status == SaleStatus.Draft),
+            PricedSales = sales.Count(s => s.Status == SaleStatus.Priced),
+            SubmittedSales = sales.Count(s => s.Status == SaleStatus.Submitted),
+            CancelledSales = sales.Count(s => s.Status == SaleStatus.Cancelled),
+            ExpiredSales = sales.Count(s => s.Status == SaleStatus.Expired),
             TotalRevenue = totalRevenue,
-            AverageOrderValue = averageOrderValue,
             RecentSales = recentSales
         };
     }

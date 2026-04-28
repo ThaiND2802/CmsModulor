@@ -129,6 +129,21 @@ internal static class SaleTestFixture
         return permissionGate;
     }
 
+    public static IFeatureGate CreateFeatureGate(params (string FeatureName, bool Enabled)[] features)
+    {
+        var featureGate = Substitute.For<IFeatureGate>();
+        var values = features.ToDictionary(x => x.FeatureName, x => x.Enabled, StringComparer.OrdinalIgnoreCase);
+        featureGate.IsEnabledAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var featureName = callInfo.Arg<string>();
+                return values.TryGetValue(featureName, out var enabled)
+                    ? new ValueTask<bool>(enabled)
+                    : new ValueTask<bool>(false);
+            });
+        return featureGate;
+    }
+
     public static CatalogVariantSummary CreateCatalogVariantSummary(
         Guid? variantId = null,
         Guid? productId = null,

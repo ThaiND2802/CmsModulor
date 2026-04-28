@@ -61,6 +61,11 @@ public sealed class ApplyCouponHandler : IRequestHandler<ApplyCouponCommand, Api
             throw new BusinessRuleAppException($"Coupon '{coupon.Code}' has expired.");
         }
 
+        if (coupon.Type is not (SaleCouponType.FixedAmount or SaleCouponType.Percentage))
+        {
+            throw new BusinessRuleAppException($"Coupon '{coupon.Code}' is not supported in the MVP runtime.");
+        }
+
         if (sale.Items.Count == 0)
         {
             throw new ValidationAppException("Sale must contain at least one item before applying a coupon.");

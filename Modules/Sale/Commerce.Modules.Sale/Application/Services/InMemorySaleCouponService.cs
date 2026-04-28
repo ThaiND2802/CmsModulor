@@ -8,8 +8,7 @@ public sealed class InMemorySaleCouponService : ISaleCouponService
         new Dictionary<string, SaleCouponDefinition>(StringComparer.OrdinalIgnoreCase)
         {
             ["SAVE10"] = new("SAVE10", SaleCouponType.Percentage, 10m),
-            ["LESS5"] = new("LESS5", SaleCouponType.FixedAmount, 5m),
-            ["FREESHIP"] = new("FREESHIP", SaleCouponType.FreeShipping, 0m)
+            ["LESS5"] = new("LESS5", SaleCouponType.FixedAmount, 5m)
         };
 
     public Task<SaleCouponDefinition?> GetByCodeAsync(string code, CancellationToken cancellationToken)

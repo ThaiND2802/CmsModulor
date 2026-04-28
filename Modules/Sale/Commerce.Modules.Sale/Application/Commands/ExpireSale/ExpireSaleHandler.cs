@@ -25,7 +25,7 @@ public sealed class ExpireSaleHandler : IRequestHandler<ExpireSaleCommand, ApiRe
         ArgumentNullException.ThrowIfNull(command);
 
         var sale = await _saleSubmissionService.GetSaleForSubmissionAsync(command.SaleId, cancellationToken);
-        if (sale.Status is SaleStatus.Submitted or SaleStatus.Cancelled or SaleStatus.Expired or SaleStatus.Paid or SaleStatus.AwaitingPayment)
+        if (!SaleLifecycleTransitions.CanTransition(sale.Status, SaleStatus.Expired))
         {
             throw new BusinessRuleAppException($"Sale '{command.SaleId}' cannot be expired from status '{sale.Status}'.");
         }

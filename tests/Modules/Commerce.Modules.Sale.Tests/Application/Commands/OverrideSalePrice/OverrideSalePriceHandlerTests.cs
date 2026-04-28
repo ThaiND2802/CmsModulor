@@ -24,6 +24,7 @@ public sealed class OverrideSalePriceHandlerTests
             SaleTestFixture.CreateSalePricingService(),
             new SaleSubmissionService(dbContext, SaleTestFixture.CreateInventoryModule()),
             SaleTestFixture.CreatePermissionGate(false),
+            SaleTestFixture.CreateFeatureGate(("Sale.OverridePrice", true)),
             SaleTestFixture.CreateCurrentUser("user-1", "tester"),
             SaleTestFixture.CreateMapper());
 
@@ -54,6 +55,7 @@ public sealed class OverrideSalePriceHandlerTests
             SaleTestFixture.CreateSalePricingService(),
             new SaleSubmissionService(dbContext, SaleTestFixture.CreateInventoryModule()),
             SaleTestFixture.CreatePermissionGate(true),
+            SaleTestFixture.CreateFeatureGate(("Sale.OverridePrice", true)),
             SaleTestFixture.CreateCurrentUser("user-1", "tester"),
             SaleTestFixture.CreateMapper());
 
@@ -76,5 +78,34 @@ public sealed class OverrideSalePriceHandlerTests
         updatedSale.Items.Single().OverridePrice.Should().Be(8m);
         updatedSale.Items.Single().OverrideReason.Should().Be("Manager approval");
         updatedSale.StatusHistory.Should().Contain(x => x.Note != null && x.Note.Contains("Price override applied"));
+    }
+
+    [Fact]
+    public async Task Handle_WhenOverrideFeatureDisabled_RejectsDefaultFlow()
+    {
+        await using var dbContext = SaleTestFixture.CreateSaleDbContext();
+        var sale = SaleTestFixture.CreatePricedSaleEntity();
+        dbContext.Sales.Add(sale);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new OverrideSalePriceHandler(
+            dbContext,
+            SaleTestFixture.CreateSalePricingService(),
+            new SaleSubmissionService(dbContext, SaleTestFixture.CreateInventoryModule()),
+            SaleTestFixture.CreatePermissionGate(true),
+            SaleTestFixture.CreateFeatureGate(("Sale.OverridePrice", false)),
+            SaleTestFixture.CreateCurrentUser("user-1", "tester"),
+            SaleTestFixture.CreateMapper());
+
+        var act = () => handler.Handle(new OverrideSalePriceCommand
+        {
+            SaleId = sale.Id,
+            ItemId = sale.Items.Single().Id,
+            OverridePrice = 8m,
+            Reason = "Manager approval"
+        }, CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundAppException>()
+            .WithMessage("*disabled in the MVP runtime*");
     }
 }

@@ -87,4 +87,28 @@ public sealed class ApplyCouponHandlerTests
         await act.Should().ThrowAsync<BusinessRuleAppException>()
             .WithMessage("*expired*");
     }
+
+    [Fact]
+    public async Task Handle_RejectsUnsupportedCouponType()
+    {
+        await using var dbContext = SaleTestFixture.CreateSaleDbContext();
+        var sale = SaleTestFixture.CreatePricedSaleEntity();
+        dbContext.Sales.Add(sale);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new ApplyCouponHandler(
+            dbContext,
+            SaleTestFixture.CreateSaleCouponService(new SaleCouponDefinition("FREESHIP", (SaleCouponType)999, 0m)),
+            SaleTestFixture.CreateSalePricingService(),
+            SaleTestFixture.CreateMapper());
+
+        var act = () => handler.Handle(new ApplyCouponCommand
+        {
+            SaleId = sale.Id,
+            Code = "FREESHIP"
+        }, CancellationToken.None);
+
+        await act.Should().ThrowAsync<BusinessRuleAppException>()
+            .WithMessage("*not supported in the MVP runtime*");
+    }
 }

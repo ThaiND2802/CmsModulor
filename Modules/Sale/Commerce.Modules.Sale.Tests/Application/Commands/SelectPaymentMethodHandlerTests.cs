@@ -60,34 +60,6 @@ public sealed class SelectPaymentMethodHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AwaitingPaymentSale_SelectsPaymentMethod()
-    {
-        // Arrange
-        var sale = new Domain.Sale
-        {
-            Id = Guid.NewGuid(),
-            SaleNumber = "SALE-002",
-            CustomerEmail = "test@example.com",
-            Status = SaleStatus.AwaitingPayment,
-            Currency = "USD",
-            TotalAmount = 100m,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-        _context.Sales.Add(sale);
-        await _context.SaveChangesAsync();
-
-        var command = new SelectPaymentMethodCommand(sale.Id, PaymentMethod.BankTransfer);
-
-        // Act
-        await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        var updated = await _context.Sales.FindAsync(sale.Id);
-        updated.Should().NotBeNull();
-        updated!.PaymentMethod.Should().Be(PaymentMethod.BankTransfer);
-    }
-
-    [Fact]
     public async Task Handle_InvalidStatus_ThrowsBusinessRuleException()
     {
         // Arrange

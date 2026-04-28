@@ -169,6 +169,7 @@ public sealed class SalesController : ApiControllerBase
 
     [HttpPost("{id:guid}/items/{itemId:guid}/override-price")]
     [PermissionAuthorize(SalePermissions.SalesOverridePrice)]
+    [RequireFeature("Sale.OverridePrice")]
     [ProducesResponseType(typeof(ApiResponse<SaleDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<SaleDto>>> OverridePrice(
         Guid id,
@@ -224,6 +225,7 @@ public sealed class SalesController : ApiControllerBase
 
     [HttpPost("{id:guid}/initiate-payment")]
     [PermissionAuthorize(SalePermissions.SalesEdit)]
+    [RequireFeature("Sale.AdvancedPayment")]
     [ProducesResponseType(typeof(ApiResponse<object?>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<object?>>> InitiatePayment(
         Guid id,

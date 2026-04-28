@@ -32,7 +32,7 @@ public sealed class GetSaleTimelineHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SaleWithFullLifecycle_ReturnsCompleteTimeline()
+    public async Task Handle_SaleWithCoreLifecycle_ReturnsOnlyOperationalEvents()
     {
         // Arrange
         var createdAt = DateTime.UtcNow.AddHours(-2);
@@ -41,9 +41,9 @@ public sealed class GetSaleTimelineHandlerTests
             Id = Guid.NewGuid(),
             SaleNumber = "SALE-001",
             CustomerEmail = "test@example.com",
-            Status = SaleStatus.Paid,
+            Status = SaleStatus.Submitted,
             PaymentMethod = PaymentMethod.CreditCard,
-            PaymentStatus = PaymentStatus.Completed,
+            PaymentStatus = PaymentStatus.Paid,
             PaidAmount = 100m,
             PaymentReference = "REF-12345",
             CouponCode = "SAVE10",
@@ -53,7 +53,6 @@ public sealed class GetSaleTimelineHandlerTests
             TotalAmount = 90m,
             CreatedAtUtc = createdAt,
             CreatedBy = "user1",
-            PaymentInitiatedAtUtc = createdAt.AddMinutes(30),
             PaidAtUtc = createdAt.AddMinutes(35),
             SubmittedAtUtc = createdAt.AddMinutes(40),
             OrderId = Guid.NewGuid()
@@ -74,7 +73,27 @@ public sealed class GetSaleTimelineHandlerTests
             Id = Guid.NewGuid(),
             SaleId = sale.Id,
             FromStatus = SaleStatus.Priced,
-            ToStatus = SaleStatus.AwaitingPayment,
+            ToStatus = SaleStatus.Draft,
+            ChangedAtUtc = createdAt.AddMinutes(20),
+            ChangedBy = "user1"
+        });
+
+        sale.StatusHistory.Add(new SaleStatusHistory
+        {
+            Id = Guid.NewGuid(),
+            SaleId = sale.Id,
+            FromStatus = SaleStatus.Draft,
+            ToStatus = SaleStatus.Priced,
+            ChangedAtUtc = createdAt.AddMinutes(25),
+            ChangedBy = "user1"
+        });
+
+        sale.StatusHistory.Add(new SaleStatusHistory
+        {
+            Id = Guid.NewGuid(),
+            SaleId = sale.Id,
+            FromStatus = SaleStatus.Priced,
+            ToStatus = SaleStatus.Submitted,
             ChangedAtUtc = createdAt.AddMinutes(30),
             ChangedBy = "user1"
         });
@@ -91,13 +110,11 @@ public sealed class GetSaleTimelineHandlerTests
         result.Should().NotBeNull();
         result.SaleId.Should().Be(sale.Id);
         result.SaleNumber.Should().Be("SALE-001");
-        result.Events.Should().NotBeEmpty();
         result.Events.Should().Contain(e => e.EventType == "SaleCreated");
-        result.Events.Should().Contain(e => e.EventType == "StatusChanged");
-        result.Events.Should().Contain(e => e.EventType == "CouponApplied");
-        result.Events.Should().Contain(e => e.EventType == "PaymentInitiated");
-        result.Events.Should().Contain(e => e.EventType == "PaymentCompleted");
+        result.Events.Should().Contain(e => e.EventType == "SaleRepriced");
+        result.Events.Should().Contain(e => e.EventType == "PaymentMarkedPaid");
         result.Events.Should().Contain(e => e.EventType == "SaleSubmitted");
+        result.Events.Should().OnlyContain(e => e.EventType is "SaleCreated" or "SaleRepriced" or "PaymentMarkedPaid" or "SaleSubmitted");
         result.Events.Should().BeInAscendingOrder(e => e.OccurredAtUtc);
     }
 
@@ -139,5 +156,40 @@ public sealed class GetSaleTimelineHandlerTests
         result.Should().NotBeNull();
         result.Events.Should().HaveCount(1);
         result.Events[0].EventType.Should().Be("SaleCreated");
+    }
+
+    [Fact]
+    public async Task Handle_CancelledSale_ReturnsCancelledEvent()
+    {
+        var createdAt = DateTime.UtcNow.AddHours(-1);
+        var sale = new Domain.Sale
+        {
+            Id = Guid.NewGuid(),
+            SaleNumber = "SALE-003",
+            CustomerEmail = "test@example.com",
+            Status = SaleStatus.Cancelled,
+            Currency = "USD",
+            TotalAmount = 50m,
+            CreatedAtUtc = createdAt,
+            CreatedBy = "user2"
+        };
+
+        sale.StatusHistory.Add(new SaleStatusHistory
+        {
+            Id = Guid.NewGuid(),
+            SaleId = sale.Id,
+            FromStatus = SaleStatus.Draft,
+            ToStatus = SaleStatus.Cancelled,
+            ChangedAtUtc = createdAt.AddMinutes(10),
+            ChangedBy = "user2"
+        });
+
+        _context.Sales.Add(sale);
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(new GetSaleTimelineQuery(sale.Id), CancellationToken.None);
+
+        result.Events.Should().Contain(e => e.EventType == "SaleCancelled");
+        result.Events.Should().OnlyContain(e => e.EventType is "SaleCreated" or "SaleCancelled");
     }
 }

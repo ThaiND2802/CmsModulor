@@ -1,6 +1,7 @@
 using AutoMapper;
 using Commerce.Modules.Sale.Application.DTOs.Responses;
 using Commerce.Modules.Sale.Application.Services;
+using Commerce.Modules.Sale.Domain;
 using Commerce.Modules.Sale.Infrastructure;
 using CommerceCore.Application.Responses;
 using CommerceCore.SharedKernel.Exceptions;
@@ -54,11 +55,14 @@ public sealed class RepriceSaleHandler : IRequestHandler<RepriceSaleCommand, Api
 
         if (sale.IsExpired(DateTime.UtcNow))
         {
+            SaleLifecycleTransitions.EnsureCanTransition(sale.Status, Domain.SaleStatus.Expired, "expire");
             sale.Status = Domain.SaleStatus.Expired;
         }
         else
         {
-        sale.Status = sale.Items.Count > 0 ? Domain.SaleStatus.Priced : Domain.SaleStatus.Draft;
+            var targetStatus = sale.Items.Count > 0 ? Domain.SaleStatus.Priced : Domain.SaleStatus.Draft;
+            SaleLifecycleTransitions.EnsureCanTransition(sale.Status, targetStatus, "reprice");
+            sale.Status = targetStatus;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

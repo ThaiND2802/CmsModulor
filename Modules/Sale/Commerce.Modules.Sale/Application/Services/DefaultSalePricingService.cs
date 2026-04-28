@@ -17,19 +17,11 @@ public sealed class DefaultSalePricingService : ISalePricingService
             sale.BaseDiscountAmount = sale.DiscountAmount;
         }
 
-        if (string.IsNullOrWhiteSpace(sale.CouponCode)
-            && sale.CouponShippingDiscountAmount == 0m
-            && sale.BaseShippingAmount == 0m
-            && sale.ShippingAmount > 0m)
-        {
-            sale.BaseShippingAmount = sale.ShippingAmount;
-        }
-
         sale.SubtotalAmount = sale.Items.Sum(static x => (x.OverridePrice ?? x.UnitPrice) * x.Quantity);
         sale.CouponDiscountAmount = CalculateCouponDiscount(sale);
-        sale.CouponShippingDiscountAmount = CalculateCouponShippingDiscount(sale);
+        sale.CouponShippingDiscountAmount = 0m;
         sale.DiscountAmount = sale.BaseDiscountAmount + sale.CouponDiscountAmount;
-        sale.ShippingAmount = Math.Max(0m, sale.BaseShippingAmount - sale.CouponShippingDiscountAmount);
+        sale.ShippingAmount = sale.BaseShippingAmount;
         sale.TotalAmount = sale.SubtotalAmount
             - sale.DiscountAmount
             - sale.Items.Sum(static x => x.DiscountAmount)
@@ -58,20 +50,4 @@ public sealed class DefaultSalePricingService : ISalePricingService
         };
     }
 
-    private static decimal CalculateCouponShippingDiscount(SaleEntity sale)
-    {
-        if (string.IsNullOrWhiteSpace(sale.CouponCode) || string.IsNullOrWhiteSpace(sale.CouponType))
-        {
-            return 0m;
-        }
-
-        if (!Enum.TryParse<SaleCouponType>(sale.CouponType, ignoreCase: true, out var couponType))
-        {
-            return 0m;
-        }
-
-        return couponType == SaleCouponType.FreeShipping
-            ? sale.BaseShippingAmount
-            : 0m;
-    }
 }

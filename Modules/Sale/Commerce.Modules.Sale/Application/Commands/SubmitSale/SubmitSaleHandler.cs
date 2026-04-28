@@ -33,11 +33,23 @@ public sealed class SubmitSaleHandler : IRequestHandler<SubmitSaleCommand, ApiRe
         var sale = await _saleSubmissionService.GetSaleForSubmissionAsync(command.SaleId, cancellationToken);
         SaleSubmissionService.EnsureCanSubmit(sale);
 
-        await _saleSubmissionService.ReserveStockAsync(sale, cancellationToken);
-        Guid? orderId = null;
+        if (sale.Status == SaleStatus.Submitted)
+        {
+            return new ApiResponse<SaleDto>
+            {
+                Status = StatusCodes.Status200OK,
+                Data = _mapper.Map<SaleDto>(sale)
+            };
+        }
+
+        var reservedStock = false;
 
         try
         {
+            await _saleSubmissionService.ReserveStockAsync(sale, cancellationToken);
+            reservedStock = true;
+
+            SaleLifecycleTransitions.EnsureCanTransition(sale.Status, SaleStatus.Submitted, "submit");
             var orderResponse = await _orderModule.CreateOrderFromSaleAsync(
                 SaleSubmissionService.MapToOrderRequest(sale),
                 cancellationToken);
@@ -47,28 +59,22 @@ public sealed class SubmitSaleHandler : IRequestHandler<SubmitSaleCommand, ApiRe
                 throw new BusinessRuleAppException(orderResponse.ErrorMessage ?? "Failed to create order from sale.");
             }
 
-            orderId = orderResponse.OrderId.Value;
             sale.Status = SaleStatus.Submitted;
-            sale.OrderId = orderId.Value;
+            sale.OrderId = orderResponse.OrderId.Value;
             sale.SubmittedAtUtc = DateTime.UtcNow;
             _saleSubmissionService.AppendStatusHistory(
                 sale,
                 SaleStatus.Priced,
                 SaleStatus.Submitted,
-                $"Order created from sale. OrderId: {orderId.Value}");
+                $"Order created from sale. OrderId: {orderResponse.OrderId.Value}");
             await _saleSubmissionService.SaveChangesAsync(cancellationToken);
         }
         catch
         {
-            sale.Status = SaleStatus.Priced;
-            sale.OrderId = null;
-            sale.SubmittedAtUtc = null;
-            if (sale.StatusHistory.LastOrDefault()?.ToStatus == SaleStatus.Submitted)
+            if (reservedStock)
             {
-                sale.StatusHistory.Remove(sale.StatusHistory.Last());
+                await _saleSubmissionService.ReleaseStockAsync(sale, cancellationToken);
             }
-
-            await _saleSubmissionService.ReleaseStockAsync(sale, cancellationToken);
 
             throw;
         }

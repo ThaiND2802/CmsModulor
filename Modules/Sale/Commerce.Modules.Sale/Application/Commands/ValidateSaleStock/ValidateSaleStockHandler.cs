@@ -33,6 +33,8 @@ public sealed class ValidateSaleStockHandler : IRequestHandler<ValidateSaleStock
             result = new SaleStockValidationDto(
                 sale.Id,
                 false,
+                false,
+                "preview_only",
                 null,
                 sale.Items
                     .Where(static item => item.VariantId.HasValue)
